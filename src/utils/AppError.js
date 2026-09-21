@@ -1,4 +1,7 @@
-// src/utils/AppError.js
+/**
+ * Global operational error handler class.
+ * Used to format and standardize API error responses.
+ */
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);

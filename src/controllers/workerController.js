@@ -1,146 +1,30 @@
 const workerService = require('../services/workerService');
 const asyncHandler = require('../utils/asyncHandler');
-const AppError = require('../utils/AppError');
 
-/**
- * @desc    Add a new worker (Offline-First Ready)
- * @route   POST /api/workers
- * @access  Private (Supervisor)
- */
-const addWorker = asyncHandler(async (req, res, next) => {
-  const { local_id, name, base_daily_wage } = req.body;
-  const farmId = req.user.farm_id;
-
-  if (!local_id || !name || base_daily_wage === undefined) {
-    return next(new AppError('البيانات الأساسية (المعرف المحلي، الاسم، الأجر اليومي الأساسي) مطلوبة', 400));
-  }
-
-  if (Number(base_daily_wage) < 0) {
-    return next(new AppError('الأجر اليومي لا يمكن أن يكون بالسالب', 400));
-  }
-
-  const result = await workerService.createWorker({ ...req.body, farm_id: farmId });
-
-  res.status(201).json({
-    message: result.isDuplicate ? 'تمت مزامنة العامل مسبقاً' : 'تم تسجيل بيانات العامل بنجاح',
-    worker: result.worker
-  });
+const createWorker = asyncHandler(async (req, res) => {
+  const worker = await workerService.createWorker(req.body);
+  res.status(201).json({ message: 'تم إضافة العامل بنجاح', data: worker });
 });
 
-/**
- * @desc    Get workers for supervisor's farm
- * @route   GET /api/workers
- * @access  Private (Supervisor)
- */
-const getWorkers = asyncHandler(async (req, res, next) => {
-  const workers = await workerService.getWorkers(req.user.farm_id, req.query);
-  res.status(200).json({ count: workers.length, workers });
+const getAllWorkers = asyncHandler(async (req, res) => {
+  const filter = req.query.active ? { is_active: req.query.active === 'true' } : {};
+  const workers = await workerService.getAllWorkers(filter);
+  res.status(200).json({ count: workers.length, data: workers });
 });
 
-/**
- * @desc    Record daily log (attendance/absence/bonus)
- * @route   POST /api/workers/log
- * @access  Private (Supervisor)
- */
-const recordWorkerLog = asyncHandler(async (req, res, next) => {
-  const { local_id, worker_id, log_date, wage_multiplier } = req.body;
-  const farmId = req.user.farm_id;
-
-  if (!local_id || !worker_id || !log_date || wage_multiplier === undefined) {
-    return next(new AppError('البيانات الأساسية لتسجيل اليومية غير مكتملة', 400));
-  }
-
-  if (Number(wage_multiplier) < 0) {
-    return next(new AppError('معامل الأجر لا يمكن أن يكون بالسالب', 400));
-  }
-
-  const result = await workerService.recordLog(req.body, req.user._id, farmId);
-
-  if (result.isDuplicate) {
-    return res.status(200).json({ message: 'تم استلام هذه اليومية مسبقاً', log: result.log });
-  }
-
-  res.status(201).json({
-    message: 'تم تسجيل اليومية واحتساب الاستحقاق بنجاح',
-    log: result.log
-  });
+const getWorkerById = asyncHandler(async (req, res) => {
+  const worker = await workerService.getWorkerById(req.params.id);
+  res.status(200).json({ data: worker });
 });
 
-/**
- * @desc    Get full statement (Ledger) for a worker
- * @route   GET /api/workers/:worker_id/statement
- * @access  Private (Supervisor)
- */
-const getWorkerStatement = asyncHandler(async (req, res, next) => {
-  const statement = await workerService.getWorkerStatement(req.params.worker_id, req.user.farm_id);
-  res.status(200).json(statement);
+const updateWorker = asyncHandler(async (req, res) => {
+  const worker = await workerService.updateWorker(req.params.id, req.body);
+  res.status(200).json({ message: 'تم تحديث بيانات العامل بنجاح', data: worker });
 });
 
-/**
- * @desc    Settle worker account (Pay salary/advance)
- * @route   POST /api/workers/settle
- * @access  Private (Supervisor)
- */
-const settleWorkerAccount = asyncHandler(async (req, res, next) => {
-  const { local_id, worker_id, amount_to_pay, transaction_date } = req.body;
-  const farmId = req.user.farm_id;
-
-  if (!local_id || !worker_id || !amount_to_pay || !transaction_date) {
-    return next(new AppError('البيانات الأساسية لعملية الصرف غير مكتملة', 400));
-  }
-
-  if (Number(amount_to_pay) <= 0) {
-    return next(new AppError('المبلغ المصروف يجب أن يكون أكبر من الصفر', 400));
-  }
-
-  const result = await workerService.settleAccount(req.body, req.user._id, farmId);
-
-  if (result.isDuplicate) {
-    return res.status(200).json({ message: 'تم تسجيل عملية الصرف مسبقاً', transaction: result.transaction });
-  }
-
-  res.status(201).json({
-    message: 'تم صرف المبلغ وتوثيقه في الخزينة بنجاح',
-    transaction: result.transaction
-  });
+const toggleWorkerStatus = asyncHandler(async (req, res) => {
+  const worker = await workerService.toggleWorkerStatus(req.params.id);
+  res.status(200).json({ message: `تم ${worker.is_active ? 'تنشيط' : 'إيقاف'} العامل بنجاح`, data: worker });
 });
 
-/**
- * @desc    Change worker status (ACTIVE, ON_LEAVE, TERMINATED)
- * @route   PUT /api/workers/:worker_id/status
- * @access  Private (Supervisor)
- */
-const changeWorkerStatus = asyncHandler(async (req, res, next) => {
-  const { status } = req.body;
-
-  if (!['ACTIVE', 'ON_LEAVE', 'TERMINATED'].includes(status)) {
-    return next(new AppError('حالة العامل غير صالحة. الحالات المقبولة: ACTIVE, ON_LEAVE, TERMINATED', 400));
-  }
-
-  const worker = await workerService.changeStatus(req.params.worker_id, status, req.user.farm_id);
-
-  res.status(200).json({
-    message: `تم تحديث حالة العامل إلى: ${status} بنجاح`,
-    worker
-  });
-});
-
-/**
- * @desc    Get all worker logs for the farm
- * @route   GET /api/workers/logs
- * @access  Private (Supervisor)
- */
-const getWorkerLogs = asyncHandler(async (req, res, next) => {
-  const logs = await workerService.getAllLogs(req.user.farm_id);
-  res.status(200).json({ count: logs.length, logs });
-});
-
-module.exports = {
-  addWorker,
-  getWorkers,
-  recordWorkerLog,
-  getWorkerStatement,
-  settleWorkerAccount,
-  changeWorkerStatus,
-  getWorkerLogs
-};
+module.exports = { createWorker, getAllWorkers, getWorkerById, updateWorker, toggleWorkerStatus };

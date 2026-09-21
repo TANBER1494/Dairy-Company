@@ -2,15 +2,9 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
-    farm_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Farm',
-      required: true,
-      index: true,
-    },
     target_role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'SUPERVISOR'], 
+      enum: ['Admin', 'InventoryAccountant', 'GeneralAccountant'],
       required: true,
     },
     target_user_id: {
@@ -29,14 +23,11 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: [
-        'CYCLE_STARTED',
-        'CYCLE_ENDED',
-        'HIGH_MORTALITY',
-        'FEED_DELIVERY',
-        'DAILY_LOG',
-        'EGG_SALE',
-        'SYSTEM',
-        'SYNC_WARNING',
+        'PAYMENT_RECEIVED',
+        'SUPPLIER_DELIVERY',
+        'INVENTORY_ALERT',
+        'SYSTEM_UPDATE',
+        'GENERAL_ALERT'
       ],
       required: true,
     },
@@ -52,8 +43,10 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-notificationSchema.index({ farm_id: 1, target_role: 1, createdAt: -1 });
+// Index for optimizing queries by role and creation date
+notificationSchema.index({ target_role: 1, createdAt: -1 });
 
+// TTL index to automatically delete notifications after 30 days
 notificationSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 30 * 24 * 60 * 60 }

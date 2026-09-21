@@ -1,57 +1,82 @@
-const Cycle = require('../models/Cycle');
-const InventoryItem = require('../models/InventoryItem');
-const Invoice = require('../models/Invoice');
+const SupplierTransaction = require('../models/SupplierTransaction');
+const ClientTransaction = require('../models/ClientTransaction');
+const Expense = require('../models/Expense');
+const Supplier = require('../models/Supplier');
+const Client = require('../models/Client');
+const Product = require('../models/Product');
 
 class DashboardService {
-  
-  async getSupervisorSummary(farmId) {
-    
-    const [activeCycles, lowStockItems, debtsAggregation] = await Promise.all([
+  async getSummary(query) {
+    let matchStage = {};
+    let expenseMatchStage = {};
+
+    if (query.startDate || query.endDate) {
+      matchStage.date = {};
+      expenseMatchStage.date = {};
       
-      Cycle.find({ farm_id: farmId, status: 'ACTIVE' })
-        .populate('barn_id', 'name')
-        .select('name type current_bird_count start_date barn_id')
-        .lean(),
+      if (query.startDate) {
+        const start = new Date(query.startDate);
+        matchStage.date.$gte = start;
+        expenseMatchStage.date.$gte = start;
+      }
+      if (query.endDate) {
+        const end = new Date(query.endDate);
+        end.setHours(23, 59, 59, 999);
+        matchStage.date.$lte = end;
+        expenseMatchStage.date.$lte = end;
+      }
+    }
 
-      InventoryItem.find({ 
-        farm_id: farmId, 
-        deleted_at: null, 
-        min_alert_level: { $gt: 0 }, 
-        $expr: { $lte: ['$stock_quantity', '$min_alert_level'] } 
-      })
-      .select('name category stock_quantity min_alert_level unit')
-      .lean(),
-
-      Invoice.aggregate([
-        { 
-          $match: { 
-            farm_id: farmId, 
-            payment_status: { $ne: 'PAID' } 
-          } 
-        },
-        {
-          $group: {
-            _id: null,
-            debts_for_us: { 
-              $sum: { $cond: [{ $eq: ['$invoice_type', 'SALE'] }, '$remaining_amount', 0] } 
-            },
-            debts_on_us: { 
-              $sum: { $cond: [{ $eq: ['$invoice_type', 'PURCHASE'] }, '$remaining_amount', 0] } 
-            }
-          }
-        }
-      ])
+    const clientsData = await ClientTransaction.aggregate([
+      { $match: matchStage },
+      { $group: { _id: null, totalPaid: { $sum: '$paid_amount' }, totalSales: { $sum: '$total_price' } } }
     ]);
 
+    const suppliersData = await SupplierTransaction.aggregate([
+      { $match: matchStage },
+      { $group: { _id: null, totalPaid: { $sum: '$paid_amount' }, totalPurchases: { $sum: '$total_price' } } }
+    ]);
+
+    const expensesData = await Expense.aggregate([
+      { $match: expenseMatchStage },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const totalClientPayments = clientsData[0]?.totalPaid || 0;
+    const totalSales = clientsData[0]?.totalSales || 0;
+    
+    const totalSupplierPayments = suppliersData[0]?.totalPaid || 0;
+    const totalPurchases = suppliersData[0]?.totalPurchases || 0;
+    
+    const totalExpenses = expensesData[0]?.total || 0;
+
+    const netCashFlow = totalClientPayments - totalSupplierPayments - totalExpenses;
+
+  
+    const totalSupplierDebts = await Supplier.aggregate([
+      { $group: { _id: null, total: { $sum: '$current_balance' } } }
+    ]);
+
+    const totalClientDebts = await Client.aggregate([
+      { $group: { _id: null, total: { $sum: '$current_balance' } } }
+    ]);
+
+    const currentStock = await Product.find().select('name current_stock current_price').lean();
+
     return {
-      active_cycles_count: activeCycles.length,
-      active_cycles: activeCycles,
-      low_stock_count: lowStockItems.length,
-      low_stock_alerts: lowStockItems,
-      financial_summary: {
-        debts_for_us: debtsAggregation[0]?.debts_for_us || 0,
-        debts_on_us: debtsAggregation[0]?.debts_on_us || 0,
-      }
+      financialFlow: {
+        totalSales,
+        totalPurchases,
+        totalExpenses,
+        totalClientPayments,
+        totalSupplierPayments,
+        netCashFlow
+      },
+      balances: {
+        totalDebtsToSuppliers: totalSupplierDebts[0]?.total || 0,
+        totalDebtsFromClients: totalClientDebts[0]?.total || 0,
+      },
+      inventory: currentStock
     };
   }
 }

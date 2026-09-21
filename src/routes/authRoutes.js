@@ -1,56 +1,91 @@
 const express = require('express');
 const router = express.Router();
-
-const validateRequest = require('../middlewares/validateRequest');
-const authValidation = require('../validations/authValidation');
-const { protect } = require('../middlewares/authMiddleware');
-
 const authController = require('../controllers/authController');
+const validateRequest = require('../middlewares/validateRequest');
+const { loginSchema, refreshTokenSchema } = require('../validations/authValidation');
 
-router.post(
-  '/register',
-  validateRequest(authValidation.registerSchema),
-  authController.registerSupervisor
-);
-router.post(
-  '/verify',
-  validateRequest(authValidation.verifySchema),
-  authController.verifyRegistration
-);
-router.post(
-  '/resend-otp',
-  validateRequest(authValidation.emailOnlySchema),
-  authController.resendActivationOTP
-);
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: مسارات المصادقة وتسجيل الدخول
+ */
 
-router.post(
-  '/login',
-  validateRequest(authValidation.loginSchema),
-  authController.login
-);
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: تسجيل دخول موظف/أدمن
+ *     description: يقوم بالتحقق من بيانات الدخول ويصدر Access Token و Refresh Token.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "admin"
+ *               password:
+ *                 type: string
+ *                 example: "admin123456"
+ *     responses:
+ *       200:
+ *         description: تم تسجيل الدخول بنجاح
+ *       400:
+ *         description: بيانات مفقودة أو غير صالحة
+ *       401:
+ *         description: اسم المستخدم أو كلمة المرور غير صحيحة
+ *       403:
+ *         description: الحساب موقوف
+ */
+router.post('/login', validateRequest(loginSchema), authController.login);
 
-router.post(
-  '/forgot-password',
-  validateRequest(authValidation.emailOnlySchema),
-  authController.forgotPassword
-);
-router.post(
-  '/reset-password',
-  validateRequest(authValidation.resetPasswordSchema),
-  authController.resetPassword
-);
+/**
+ * @swagger
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: تجديد الـ Access Token
+ *     description: يستخدم لإصدار توكن جديد باستخدام الـ Refresh Token عند انتهاء الجلسة.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: تم تجديد الجلسة بنجاح
+ *       401:
+ *         description: الرمز غير صالح أو منتهي الصلاحية
+ */
+router.post('/refresh-token', validateRequest(refreshTokenSchema), authController.refreshToken);
 
-router.post(
-  '/refresh-token',
-  validateRequest(authValidation.refreshTokenSchema),
-  authController.refreshToken
-);
-
-router.put(
-  '/fcm-token',
-  protect,
-  validateRequest(authValidation.fcmTokenSchema),
-  authController.updateFcmToken
-);
+/**
+ * @swagger
+ * /api/auth/setup:
+ *   post:
+ *     summary: إنشاء حساب المدير الأول (يستخدم لمرة واحدة فقط)
+ *     description: يقوم بإنشاء حساب Admin افتراضي إذا لم يكن هناك أي مدير في النظام.
+ *     tags: [Authentication]
+ *     responses:
+ *       201:
+ *         description: تم إنشاء حساب المدير بنجاح
+ *       400:
+ *         description: حساب المدير موجود بالفعل، لا يمكن استخدام هذا المسار مجدداً
+ */
+router.post('/setup', authController.setupAdmin);
 
 module.exports = router;
