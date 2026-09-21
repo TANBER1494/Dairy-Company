@@ -10,9 +10,13 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'سيرفر التطوير (Development)',
+        url: 'https://dairy-company.onrender.com',
+        description: 'سيرفر الإنتاج (Live)'
       },
+      {
+        url: 'http://localhost:5000',
+        description: 'سيرفر التطوير (Local)'
+      }
     ],
     components: {
       securitySchemes: {
