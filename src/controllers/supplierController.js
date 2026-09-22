@@ -3,20 +3,12 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const createSupplier = asyncHandler(async (req, res) => {
   const supplier = await supplierService.createSupplier(req.body);
-  res.status(201).json({
-    message: 'تم إضافة المورد بنجاح',
-    data: supplier
-  });
+  res.status(201).json({ message: 'تم إضافة المورد بنجاح', data: supplier });
 });
 
 const getAllSuppliers = asyncHandler(async (req, res) => {
-  const filter = req.query.active ? { is_active: req.query.active === 'true' } : {};
-  const suppliers = await supplierService.getAllSuppliers(filter);
-  
-  res.status(200).json({
-    count: suppliers.length,
-    data: suppliers
-  });
+  const suppliers = await supplierService.getAllSuppliers(req.query);
+  res.status(200).json({ count: suppliers.length, data: suppliers });
 });
 
 const getSupplierById = asyncHandler(async (req, res) => {
@@ -25,27 +17,30 @@ const getSupplierById = asyncHandler(async (req, res) => {
 });
 
 const updateSupplier = asyncHandler(async (req, res) => {
-  const supplier = await supplierService.updateSupplier(req.params.id, req.body);
-  res.status(200).json({
-    message: 'تم تحديث بيانات المورد بنجاح',
-    data: supplier
-  });
+  const supplier = await supplierService.updateSupplier(
+    req.params.id,
+    req.body
+  );
+  res
+    .status(200)
+    .json({ message: 'تم تحديث بيانات المورد بنجاح', data: supplier });
 });
 
 const toggleSupplierStatus = asyncHandler(async (req, res) => {
   const supplier = await supplierService.toggleSupplierStatus(req.params.id);
-  res.status(200).json({
-    message: `تم ${supplier.is_active ? 'تنشيط' : 'إيقاف'} المورد بنجاح`,
-    data: supplier
-  });
+  res
+    .status(200)
+    .json({
+      message: `تم ${supplier.is_active ? 'تنشيط' : 'إيقاف'} المورد بنجاح`,
+      data: supplier,
+    });
 });
 
 const getSupplierStatement = asyncHandler(async (req, res) => {
   const statement = await supplierService.getSupplierStatement(req.params.key);
-  res.status(200).json({
-    message: 'تم استخراج كشف حساب المورد بنجاح',
-    data: statement
-  });
+  res
+    .status(200)
+    .json({ message: 'تم استخراج كشف حساب المورد بنجاح', data: statement });
 });
 
 module.exports = {
@@ -54,5 +49,5 @@ module.exports = {
   getSupplierById,
   updateSupplier,
   toggleSupplierStatus,
-  getSupplierStatement
+  getSupplierStatement,
 };

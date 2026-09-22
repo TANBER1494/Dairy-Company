@@ -21,7 +21,7 @@ router.use(protect);
  * /api/clients:
  *   get:
  *     summary: جلب جميع العملاء
- *     description: يمكن تصفية العملاء النشطين فقط بإرسال ?active=true
+ *     description: يمكن تصفية العملاء النشطين فقط والبحث عنهم بجزء من العنوان.
  *     tags: [Clients]
  *     security:
  *       - bearerAuth: []
@@ -30,7 +30,12 @@ router.use(protect);
  *         name: active
  *         schema:
  *           type: boolean
- *         description: فلترة حسب حالة النشاط
+ *         description: فلترة حسب حالة النشاط (true / false)
+ *       - in: query
+ *         name: address
+ *         schema:
+ *           type: string
+ *         description: بحث بجزء من العنوان (مثال أسيوط)
  *     responses:
  *       200:
  *         description: قائمة العملاء

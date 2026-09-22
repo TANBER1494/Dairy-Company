@@ -24,7 +24,7 @@ router.use(protect);
  * /api/suppliers:
  *   get:
  *     summary: جلب جميع الموردين
- *     description: يمكن تصفية الموردين النشطين فقط بإرسال ?active=true
+ *     description: يمكن تصفية الموردين النشطين فقط والبحث عنهم بجزء من العنوان.
  *     tags: [Suppliers]
  *     security:
  *       - bearerAuth: []
@@ -33,7 +33,12 @@ router.use(protect);
  *         name: active
  *         schema:
  *           type: boolean
- *         description: فلترة حسب حالة النشاط
+ *         description: فلترة حسب حالة النشاط (true / false)
+ *       - in: query
+ *         name: address
+ *         schema:
+ *           type: string
+ *         description: بحث بجزء من العنوان (مثال أسيوط)
  *     responses:
  *       200:
  *         description: قائمة الموردين
