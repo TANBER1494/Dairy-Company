@@ -84,7 +84,7 @@ router
   .route('/')
   .get(supplierTransactionController.getAllTransactions)
   .post(
-    authorize('Admin', 'InventoryAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(createTransactionSchema),
     supplierTransactionController.createTransaction
   );
@@ -185,7 +185,7 @@ router
 router
   .route('/:id')
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(updateTransactionSchema),
     supplierTransactionController.updateTransaction
   )

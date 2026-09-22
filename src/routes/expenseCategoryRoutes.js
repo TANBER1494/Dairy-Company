@@ -64,7 +64,7 @@ router.route('/')
     expenseCategoryController.getAllCategories
   )
   .post(
-    authorize('Admin'), 
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'), 
     validateRequest(createCategorySchema), 
     expenseCategoryController.createCategory
   );
@@ -100,7 +100,7 @@ router.route('/')
  */
 router.route('/:id')
   .put(
-    authorize('Admin'), 
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'), 
     validateRequest(updateCategorySchema), 
     expenseCategoryController.updateCategory
   );
@@ -123,6 +123,6 @@ router.route('/:id')
  *       200:
  *         description: تم تغيير الحالة بنجاح
  */
-router.patch('/:id/toggle-status', authorize('Admin'), expenseCategoryController.toggleCategoryStatus);
+router.patch('/:id/toggle-status', authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'), expenseCategoryController.toggleCategoryStatus);
 
 module.exports = router;

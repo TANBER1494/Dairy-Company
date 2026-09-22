@@ -77,7 +77,7 @@ router
   .route('/')
   .get(supplierController.getAllSuppliers)
   .post(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(createSupplierSchema),
     supplierController.createSupplier
   );
@@ -107,7 +107,7 @@ router
 router
   .route('/statement/:key')
   .get(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     supplierController.getSupplierStatement
   );
 
@@ -160,7 +160,7 @@ router
   .route('/:id')
   .get(supplierController.getSupplierById)
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(updateSupplierSchema),
     supplierController.updateSupplier
   );
@@ -185,7 +185,7 @@ router
  */
 router.patch(
   '/:id/toggle-status',
-  authorize('Admin'),
+  authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
   supplierController.toggleSupplierStatus
 );
 

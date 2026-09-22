@@ -185,7 +185,7 @@ router
 router
   .route('/:id')
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(updateTransactionSchema),
     clientTransactionController.updateTransaction
   )

@@ -72,7 +72,7 @@ router
   .route('/')
   .get(expenseController.getAllExpenses)
   .post(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(createExpenseSchema),
     expenseController.createExpense
   );
@@ -138,12 +138,12 @@ router
   .route('/:id')
   .get(expenseController.getExpenseById)
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(updateExpenseSchema),
     expenseController.updateExpense
   )
   .delete(
-    authorize('Admin'), 
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'), 
     expenseController.deleteExpense
   );
 

@@ -59,7 +59,7 @@ router.use(protect);
 router.route('/')
   .get(workerController.getAllWorkers)
   .post(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(createWorkerSchema),
     workerController.createWorker
   );
@@ -110,7 +110,7 @@ router.route('/')
 router.route('/:id')
   .get(workerController.getWorkerById)
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
     validateRequest(updateWorkerSchema),
     workerController.updateWorker
   );
@@ -133,6 +133,6 @@ router.route('/:id')
  *       200:
  *         description: تم تغيير حالة العامل بنجاح
  */
-router.patch('/:id/toggle-status', authorize('Admin'), workerController.toggleWorkerStatus);
+router.patch('/:id/toggle-status', authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'), workerController.toggleWorkerStatus);
 
 module.exports = router;
