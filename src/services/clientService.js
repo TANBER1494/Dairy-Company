@@ -65,6 +65,36 @@ class ClientService {
 
     return { client_info: client, transactions_history: transactions };
   }
+
+async settleAccount(id, payload, userId) {
+    const client = await Client.findById(id);
+    if (!client) throw new AppError('العميل غير موجود', 404);
+
+    const total = Number(payload.total_amount) || 0;
+    const paid = Number(payload.paid_amount) || 0;
+
+    client.current_balance = client.current_balance + total - paid;
+    await client.save();
+
+    await ClientTransaction.updateMany(
+      { client_id: id, is_settled: false },
+      { $set: { is_settled: true } }
+    );
+
+    await ClientTransaction.create({
+      client_id: id,
+      quantity: 0,
+      unit_price: 0,
+      total_price: total,
+      paid_amount: paid,
+      balance_after: client.current_balance,
+      is_settled: true,
+      notes: "تصفية حساب وتقفيل الكيلوهات السابقة",
+      created_by: userId
+    });
+
+    return client;
+  }
 }
 
 module.exports = new ClientService();

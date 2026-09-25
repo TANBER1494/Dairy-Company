@@ -18,26 +18,28 @@ const getClientById = asyncHandler(async (req, res) => {
 
 const updateClient = asyncHandler(async (req, res) => {
   const client = await clientService.updateClient(req.params.id, req.body);
-  res
-    .status(200)
-    .json({ message: 'تم تحديث بيانات العميل بنجاح', data: client });
+  res.status(200).json({ message: 'تم تحديث بيانات العميل بنجاح', data: client });
 });
 
 const toggleClientStatus = asyncHandler(async (req, res) => {
   const client = await clientService.toggleClientStatus(req.params.id);
-  res
-    .status(200)
-    .json({
-      message: `تم ${client.is_active ? 'تنشيط' : 'إيقاف'} العميل بنجاح`,
-      data: client,
-    });
+  res.status(200).json({
+    message: `تم ${client.is_active ? 'تنشيط' : 'إيقاف'} العميل بنجاح`,
+    data: client,
+  });
 });
 
 const getClientStatement = asyncHandler(async (req, res) => {
   const statement = await clientService.getClientStatement(req.params.key);
-  res
-    .status(200)
-    .json({ message: 'تم استخراج كشف حساب العميل بنجاح', data: statement });
+  res.status(200).json({ message: 'تم استخراج كشف حساب العميل بنجاح', data: statement });
+});
+
+const settleClientAccount = asyncHandler(async (req, res) => {
+  const client = await clientService.settleAccount(req.params.id, req.body, req.user._id);
+  res.status(200).json({
+    message: 'تم تصفية حساب العميل وإغلاق الفواتير السابقة بنجاح',
+    data: client
+  });
 });
 
 module.exports = {
@@ -47,4 +49,5 @@ module.exports = {
   updateClient,
   toggleClientStatus,
   getClientStatement,
+  settleClientAccount
 };

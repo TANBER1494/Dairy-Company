@@ -15,9 +15,6 @@ class ClientTransactionService {
     const paid = Number(paid_amount) || 0;
     const total_price = qty * price;
 
-    client.current_balance = client.current_balance + total_price - paid;
-    await client.save();
-
     if (qty > 0 && product_id) {
       const product = await Product.findById(product_id);
       if (product) {
@@ -58,13 +55,8 @@ class ClientTransactionService {
   async updateTransaction(id, data, userId) {
     const oldTx = await ClientTransaction.findById(id);
     if (!oldTx) throw new AppError('الفاتورة غير موجودة', 404);
+    if (oldTx.is_settled) throw new AppError('لا يمكن تعديل فاتورة تم تصفية حسابها', 400);
 
-    const oldClient = await Client.findById(oldTx.client_id);
-    if (oldClient) {
-      oldClient.current_balance = oldClient.current_balance - oldTx.total_price + oldTx.paid_amount;
-      await oldClient.save();
-    }
-    
     if (oldTx.product_id && oldTx.quantity > 0) {
       const oldProduct = await Product.findById(oldTx.product_id);
       if (oldProduct) {
@@ -73,17 +65,11 @@ class ClientTransactionService {
       }
     }
 
-    const newClientId = data.client_id || oldTx.client_id;
     const newProductId = data.product_id !== undefined ? data.product_id : oldTx.product_id;
     const qty = data.quantity !== undefined ? Number(data.quantity) : oldTx.quantity;
     const price = data.unit_price !== undefined ? Number(data.unit_price) : oldTx.unit_price;
     const paid = data.paid_amount !== undefined ? Number(data.paid_amount) : oldTx.paid_amount;
     const total_price = qty * price;
-
-    const newClient = await Client.findById(newClientId);
-    if (!newClient) throw new AppError('العميل الجديد غير موجود', 404);
-    newClient.current_balance = newClient.current_balance + total_price - paid;
-    await newClient.save();
 
     if (qty > 0 && newProductId) {
       const newProduct = await Product.findById(newProductId);
@@ -96,7 +82,6 @@ class ClientTransactionService {
     const updatedTx = await ClientTransaction.findByIdAndUpdate(id, {
       ...data,
       total_price,
-      balance_after: newClient.current_balance,
       updated_by: userId
     }, { new: true, runValidators: true });
 
@@ -106,13 +91,8 @@ class ClientTransactionService {
   async deleteTransaction(id) {
     const tx = await ClientTransaction.findById(id);
     if (!tx) throw new AppError('الفاتورة غير موجودة', 404);
+    if (tx.is_settled) throw new AppError('لا يمكن حذف فاتورة تم تصفية حسابها', 400);
 
-    const client = await Client.findById(tx.client_id);
-    if (client) {
-      client.current_balance = client.current_balance - tx.total_price + tx.paid_amount;
-      await client.save();
-    }
-    
     if (tx.product_id && tx.quantity > 0) {
       const product = await Product.findById(tx.product_id);
       if (product) {

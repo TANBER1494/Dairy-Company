@@ -15,9 +15,6 @@ class SupplierTransactionService {
     const paid = Number(paid_amount) || 0;
     const total_price = qty * price;
 
-    supplier.current_balance = supplier.current_balance + total_price - paid;
-    await supplier.save();
-
     if (qty > 0 && product_id) {
       const product = await Product.findById(product_id);
       if (product) {
@@ -58,13 +55,8 @@ class SupplierTransactionService {
   async updateTransaction(id, data, userId) {
     const oldTx = await SupplierTransaction.findById(id);
     if (!oldTx) throw new AppError('الفاتورة غير موجودة', 404);
+    if (oldTx.is_settled) throw new AppError('لا يمكن تعديل فاتورة تم تصفية حسابها', 400);
 
-    const oldSupplier = await Supplier.findById(oldTx.supplier_id);
-    if (oldSupplier) {
-      oldSupplier.current_balance = oldSupplier.current_balance - oldTx.total_price + oldTx.paid_amount;
-      await oldSupplier.save();
-    }
-    
     if (oldTx.product_id && oldTx.quantity > 0) {
       const oldProduct = await Product.findById(oldTx.product_id);
       if (oldProduct) {
@@ -73,17 +65,11 @@ class SupplierTransactionService {
       }
     }
 
-    const newSupplierId = data.supplier_id || oldTx.supplier_id;
     const newProductId = data.product_id !== undefined ? data.product_id : oldTx.product_id;
     const qty = data.quantity !== undefined ? Number(data.quantity) : oldTx.quantity;
     const price = data.unit_price !== undefined ? Number(data.unit_price) : oldTx.unit_price;
     const paid = data.paid_amount !== undefined ? Number(data.paid_amount) : oldTx.paid_amount;
     const total_price = qty * price;
-
-    const newSupplier = await Supplier.findById(newSupplierId);
-    if (!newSupplier) throw new AppError('المورد الجديد غير موجود', 404);
-    newSupplier.current_balance = newSupplier.current_balance + total_price - paid;
-    await newSupplier.save();
 
     if (qty > 0 && newProductId) {
       const newProduct = await Product.findById(newProductId);
@@ -96,7 +82,6 @@ class SupplierTransactionService {
     const updatedTx = await SupplierTransaction.findByIdAndUpdate(id, {
       ...data,
       total_price,
-      balance_after: newSupplier.current_balance,
       updated_by: userId
     }, { new: true, runValidators: true });
 
@@ -106,13 +91,8 @@ class SupplierTransactionService {
   async deleteTransaction(id) {
     const tx = await SupplierTransaction.findById(id);
     if (!tx) throw new AppError('الفاتورة غير موجودة', 404);
+    if (tx.is_settled) throw new AppError('لا يمكن حذف فاتورة تم تصفية حسابها', 400);
 
-    const supplier = await Supplier.findById(tx.supplier_id);
-    if (supplier) {
-      supplier.current_balance = supplier.current_balance - tx.total_price + tx.paid_amount;
-      await supplier.save();
-    }
-    
     if (tx.product_id && tx.quantity > 0) {
       const product = await Product.findById(tx.product_id);
       if (product) {
@@ -124,7 +104,6 @@ class SupplierTransactionService {
     await tx.deleteOne();
     return true;
   }
-
 
   async bulkCreateTransactions(transactionsData, userId) {
     const results = [];

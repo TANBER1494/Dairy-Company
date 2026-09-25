@@ -186,4 +186,42 @@ router
     clientController.toggleClientStatus
   );
 
+  /**
+ * @swagger
+ * /api/clients/{id}/settle:
+ *   post:
+ *     summary: تصفية حساب عميل (تقفيل الدفتر)
+ *     description: يضيف قيمة اللبن للرصيد، ويخصم المحصل، ويغلق كل الحركات الجارية لتصبح مصفاة.
+ *     tags: [Clients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               total_amount:
+ *                 type: number
+ *                 description: "إجمالي قيمة الكيلوهات المباعة"
+ *               paid_amount:
+ *                 type: number
+ *                 description: "المبلغ المحصل من العميل الآن"
+ *     responses:
+ *       200:
+ *         description: تم تصفية الحساب
+ */
+router.post(
+  '/:id/settle',
+  authorize('Admin', 'GeneralAccountant'),
+  clientController.settleClientAccount
+);
+
 module.exports = router;

@@ -58,7 +58,7 @@ router.use(protect);
  */
 router.get(
   '/summary',
-  authorize('Admin', 'GeneralAccountant'),
+  authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
   cacheMiddleware(600),
   dashboardController.getDashboardSummary
 );

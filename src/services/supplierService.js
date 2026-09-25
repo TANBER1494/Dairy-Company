@@ -67,6 +67,36 @@ class SupplierService {
 
     return { supplier_info: supplier, transactions_history: transactions };
   }
+
+async settleAccount(id, payload, userId) {
+    const supplier = await Supplier.findById(id);
+    if (!supplier) throw new AppError('المورد غير موجود', 404);
+
+    const total = Number(payload.total_amount) || 0;
+    const paid = Number(payload.paid_amount) || 0;
+
+    supplier.current_balance = supplier.current_balance + total - paid;
+    await supplier.save();
+
+    await SupplierTransaction.updateMany(
+      { supplier_id: id, is_settled: false },
+      { $set: { is_settled: true } }
+    );
+
+    await SupplierTransaction.create({
+      supplier_id: id,
+      quantity: 0, 
+      unit_price: 0,
+      total_price: total, 
+      paid_amount: paid,  
+      balance_after: supplier.current_balance,
+      is_settled: true,   
+      notes: "تصفية حساب وتقفيل الكيلوهات السابقة",
+      created_by: userId
+    });
+
+    return supplier;
+  }
 }
 
 module.exports = new SupplierService();

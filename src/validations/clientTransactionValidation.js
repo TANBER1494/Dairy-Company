@@ -13,15 +13,15 @@ const createTransactionSchema = Joi.object({
   product_id: Joi.string().pattern(objectIdRegex).allow(null, '').messages({
     'string.pattern.base': 'معرف المنتج (ID) غير صالح'
   }),
-  quantity: Joi.number().min(0).default(0).messages({
+  quantity: Joi.number().min(0).allow(null, '').empty('').empty(null).default(0).messages({
     'number.base': 'الكمية يجب أن تكون رقماً',
     'number.min': 'لا يمكن أن تكون الكمية بالسالب'
   }),
-  unit_price: Joi.number().min(0).default(0).messages({
+  unit_price: Joi.number().min(0).allow(null, '').empty('').empty(null).default(0).messages({
     'number.base': 'السعر يجب أن يكون رقماً',
     'number.min': 'لا يمكن أن يكون السعر بالسالب'
   }),
-  paid_amount: Joi.number().min(0).default(0).messages({
+  paid_amount: Joi.number().min(0).allow(null, '').empty('').empty(null).default(0).messages({
     'number.base': 'المبلغ المدفوع يجب أن يكون رقماً',
     'number.min': 'لا يمكن أن يكون المبلغ المدفوع بالسالب'
   }),
@@ -40,9 +40,9 @@ const updateTransactionSchema = Joi.object({
   client_id: Joi.string().pattern(objectIdRegex),
   worker_id: Joi.string().pattern(objectIdRegex).allow(null, ''),
   product_id: Joi.string().pattern(objectIdRegex).allow(null, ''),
-  quantity: Joi.number().min(0),
-  unit_price: Joi.number().min(0),
-  paid_amount: Joi.number().min(0),
+  quantity: Joi.number().min(0).allow(null, '').empty('').empty(null),
+  unit_price: Joi.number().min(0).allow(null, '').empty('').empty(null),
+  paid_amount: Joi.number().min(0).allow(null, '').empty('').empty(null),
   shift: Joi.string().valid('MORNING', 'EVENING').allow(null, ''),
   date: Joi.date().iso().allow(null, ''),
   notes: Joi.string().allow(null, '')

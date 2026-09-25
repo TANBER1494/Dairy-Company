@@ -17,30 +17,29 @@ const getSupplierById = asyncHandler(async (req, res) => {
 });
 
 const updateSupplier = asyncHandler(async (req, res) => {
-  const supplier = await supplierService.updateSupplier(
-    req.params.id,
-    req.body
-  );
-  res
-    .status(200)
-    .json({ message: 'تم تحديث بيانات المورد بنجاح', data: supplier });
+  const supplier = await supplierService.updateSupplier(req.params.id, req.body);
+  res.status(200).json({ message: 'تم تحديث بيانات المورد بنجاح', data: supplier });
 });
 
 const toggleSupplierStatus = asyncHandler(async (req, res) => {
   const supplier = await supplierService.toggleSupplierStatus(req.params.id);
-  res
-    .status(200)
-    .json({
-      message: `تم ${supplier.is_active ? 'تنشيط' : 'إيقاف'} المورد بنجاح`,
-      data: supplier,
-    });
+  res.status(200).json({
+    message: `تم ${supplier.is_active ? 'تنشيط' : 'إيقاف'} المورد بنجاح`,
+    data: supplier,
+  });
 });
 
 const getSupplierStatement = asyncHandler(async (req, res) => {
   const statement = await supplierService.getSupplierStatement(req.params.key);
-  res
-    .status(200)
-    .json({ message: 'تم استخراج كشف حساب المورد بنجاح', data: statement });
+  res.status(200).json({ message: 'تم استخراج كشف حساب المورد بنجاح', data: statement });
+});
+
+const settleSupplierAccount = asyncHandler(async (req, res) => {
+  const supplier = await supplierService.settleAccount(req.params.id, req.body, req.user._id);
+  res.status(200).json({
+    message: 'تم تصفية حساب المورد وإغلاق الفواتير السابقة بنجاح',
+    data: supplier
+  });
 });
 
 module.exports = {
@@ -50,4 +49,5 @@ module.exports = {
   updateSupplier,
   toggleSupplierStatus,
   getSupplierStatement,
+  settleSupplierAccount
 };

@@ -189,4 +189,42 @@ router.patch(
   supplierController.toggleSupplierStatus
 );
 
+/**
+ * @swagger
+ * /api/suppliers/{id}/settle:
+ *   post:
+ *     summary: تصفية حساب مورد (تقفيل الدفتر)
+ *     description: يضيف قيمة اللبن للرصيد، ويخصم المدفوع، ويغلق كل الحركات الجارية لتصبح مصفاة.
+ *     tags: [Suppliers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               total_amount:
+ *                 type: number
+ *                 description: "إجمالي قيمة الكيلوهات الجديدة"
+ *               paid_amount:
+ *                 type: number
+ *                 description: "المبلغ المدفوع للمورد الآن"
+ *     responses:
+ *       200:
+ *         description: تم تصفية الحساب
+ */
+router.post(
+  '/:id/settle',
+  authorize('Admin', 'GeneralAccountant'),
+  supplierController.settleSupplierAccount
+);
+
 module.exports = router;

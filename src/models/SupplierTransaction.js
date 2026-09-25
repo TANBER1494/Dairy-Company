@@ -36,7 +36,11 @@ const supplierTransactionSchema = new mongoose.Schema(
     },
     balance_after: {
       type: Number,
-      required: true, 
+      default: 0, 
+    },
+    is_settled: {
+      type: Boolean,
+      default: false,
     },
     shift: {
       type: String,
