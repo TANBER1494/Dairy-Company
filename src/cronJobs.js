@@ -1,76 +1,50 @@
 const cron = require('node-cron');
-const Farm = require('./models/Farm');
+const dashboardService = require('./services/dashboardService');
 const Notification = require('./models/Notification');
 const socket = require('./models/socket');
 
 const startCronJobs = () => {
-  
-  cron.schedule('1 0 * * *', async () => {
-    console.log('[CRON] Starting daily subscription suspension check...');
-    try {
-      const now = new Date();
-      
-      const trialResult = await Farm.updateMany(
-        { subscription_status: 'TRIAL', trial_ends_at: { $lt: now } },
-        { $set: { subscription_status: 'OVERDUE' } }
-      );
-
-      const activeResult = await Farm.updateMany(
-        { subscription_status: 'ACTIVE', subscription_ends_at: { $lt: now } },
-        { $set: { subscription_status: 'OVERDUE' } }
-      );
-
-      const totalUpdated = trialResult.modifiedCount + activeResult.modifiedCount;
-      console.log(`[CRON] Suspended ${totalUpdated} expired farms.`);
-    } catch (error) {
-      console.error('[CRON] Suspension Error:', error.message);
-    }
+  cron.schedule('59 11 * * *', async () => {
+    console.log('[CRON] إعداد تقرير الوردية الصباحية...');
+    await generateShiftReport('MORNING', 'الوردية الصباحية');
   });
 
-  cron.schedule('0 10 * * *', async () => {
-    console.log('[CRON] Checking for farms nearing expiration...');
-    try {
-      const now = new Date();
-      const fiveDaysLater = new Date();
-      fiveDaysLater.setDate(now.getDate() + 5);
-      
-      const startOfTargetDay = new Date(fiveDaysLater.setHours(0, 0, 0, 0));
-      const endOfTargetDay = new Date(fiveDaysLater.setHours(23, 59, 59, 999));
-
-      const farmsToWarn = await Farm.find({
-        subscription_status: { $in: ['ACTIVE', 'TRIAL'] },
-        $or: [
-          { trial_ends_at: { $gte: startOfTargetDay, $lte: endOfTargetDay } },
-          { subscription_ends_at: { $gte: startOfTargetDay, $lte: endOfTargetDay } }
-        ]
-      }).select('_id name').lean();
-
-      if (farmsToWarn.length === 0) return;
-
-      const notificationsToInsert = farmsToWarn.map(farm => ({
-        farm_id: farm._id,
-        target_role: 'SUPERVISOR',
-        title: 'تنبيه: اقتراب انتهاء الاشتراك',
-        message: `مزرعتك (${farm.name}) سينتهي اشتراكها خلال 5 أيام. يرجى التجديد لضمان عدم توقف المزامنة.`,
-        type: 'SYSTEM',
-        link: '/settings/subscription'
-      }));
-
-      const createdNotifications = await Notification.insertMany(notificationsToInsert);
-
-      const io = socket.getIO();
-      if (io) {
-        createdNotifications.forEach(notification => {
-          io.to(notification.farm_id.toString()).emit('new_notification', notification);
-        });
-      }
-
-      console.log(`[CRON] Sent ${farmsToWarn.length} expiration warnings.`);
-    } catch (error) {
-      console.error('[CRON] Warning Cron Error:', error.message);
-    }
+  cron.schedule('59 23 * * *', async () => {
+    console.log('[CRON] إعداد تقرير الوردية المسائية...');
+    await generateShiftReport('EVENING', 'الوردية المسائية');
   });
-
 };
+
+async function generateShiftReport(shiftCode, shiftName) {
+  try {
+    const report = await dashboardService.getDailyCollectionReport({ shift: shiftCode });
+
+    const title = `تقرير توريد ${shiftName}`;
+    const message = `انتهت ${shiftName}. تم التوريد من ${report.suppliedCount} مورد، ومتبقي ${report.pendingCount} مورد لم يوردوا.`;
+
+    const targetRoles = ['Admin', 'GeneralAccountant', 'InventoryAccountant'];
+    
+    const notificationsToInsert = targetRoles.map(role => ({
+      target_role: role,
+      title,
+      message,
+      type: 'SUPPLIER_DELIVERY',
+      link: '/dashboard/daily-collection' 
+    }));
+
+    const createdNotifications = await Notification.insertMany(notificationsToInsert);
+
+    const io = socket.getIO();
+    if (io) {
+      createdNotifications.forEach(notif => {
+        io.to(notif.target_role).emit('new_notification', notif);
+      });
+    }
+
+    console.log(`[CRON] تم إرسال إشعارات ${shiftName} بنجاح.`);
+  } catch (error) {
+    console.error(`[CRON] خطأ أثناء إنشاء إشعار ${shiftName}:`, error.message);
+  }
+}
 
 module.exports = startCronJobs;

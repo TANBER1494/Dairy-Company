@@ -52,7 +52,6 @@ class DashboardService {
 
     const netCashFlow = totalClientPayments - totalSupplierPayments - totalExpenses;
 
-  
     const totalSupplierDebts = await Supplier.aggregate([
       { $group: { _id: null, total: { $sum: '$current_balance' } } }
     ]);
@@ -77,6 +76,60 @@ class DashboardService {
         totalDebtsFromClients: totalClientDebts[0]?.total || 0,
       },
       inventory: currentStock
+    };
+  }
+
+  async getDailyCollectionReport(query) {
+    const targetDate = query.date ? new Date(query.date) : new Date();
+    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+    const txQuery = {
+      date: { $gte: startOfDay, $lte: endOfDay }
+    };
+
+    if (query.shift) {
+      txQuery.shift = query.shift;
+    }
+
+    const activeSuppliers = await Supplier.find({ is_active: true })
+      .select('name code phone address')
+      .lean();
+
+    const todayTransactions = await SupplierTransaction.find(txQuery)
+      .populate('worker_id', 'name')
+      .populate('product_id', 'name')
+      .lean();
+
+    const suppliedSupplierIds = new Set(
+      todayTransactions.map(tx => tx.supplier_id.toString())
+    );
+
+    const supplied = [];
+    const pending = [];
+
+    activeSuppliers.forEach(supplier => {
+      if (suppliedSupplierIds.has(supplier._id.toString())) {
+        const supplierTx = todayTransactions.filter(
+          tx => tx.supplier_id.toString() === supplier._id.toString()
+        );
+        supplied.push({
+          supplier,
+          transactions: supplierTx 
+        });
+      } else {
+        pending.push(supplier);
+      }
+    });
+
+    return {
+      date: startOfDay.toISOString().split('T')[0],
+      shift: query.shift || 'ALL',
+      totalActiveSuppliers: activeSuppliers.length,
+      suppliedCount: supplied.length,
+      pendingCount: pending.length,
+      supplied,
+      pending
     };
   }
 }

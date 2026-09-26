@@ -7,6 +7,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
 
 const logger = require('./utils/logger');
 const { errorHandler } = require('./middlewares/errorMiddleware');
@@ -29,6 +30,11 @@ const supplierTransactionRoutes = require('./routes/supplierTransactionRoutes');
 const clientTransactionRoutes = require('./routes/clientTransactionRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const notificationRoutes = require('./routes/notificationRoutes'); 
+
+// Socket and Cron Jobs
+const socket = require('./models/socket');
+const startCronJobs = require('./cronJobs');
 
 const app = express();
 
@@ -93,6 +99,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: "Dairy Company API Docs"
 }));
 
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/workers', workerRoutes);
@@ -104,6 +111,7 @@ app.use('/api/transactions', supplierTransactionRoutes);
 app.use('/api/client-transactions', clientTransactionRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use((req, res, next) => {
   const err = new Error(`لا يمكن العثور على المسار ${req.originalUrl}`);
@@ -113,8 +121,15 @@ app.use((req, res, next) => {
 
 app.use(errorHandler);
 
+const server = http.createServer(app);
+
+socket.init(server);
+
+startCronJobs();
+
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+
+server.listen(PORT, () => {
   logger.info(`Dairy Company Server running securely in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 

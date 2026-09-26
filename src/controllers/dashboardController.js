@@ -10,6 +10,17 @@ const getDashboardSummary = asyncHandler(async (req, res) => {
   });
 });
 
+// المتحكم الجديد
+const getDailyCollectionReport = asyncHandler(async (req, res) => {
+  const report = await dashboardService.getDailyCollectionReport(req.query);
+  
+  res.status(200).json({
+    message: 'تم استخراج تقرير التوريد اليومي بنجاح',
+    data: report
+  });
+});
+
 module.exports = {
-  getDashboardSummary
+  getDashboardSummary,
+  getDailyCollectionReport
 };

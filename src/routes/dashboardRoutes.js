@@ -63,4 +63,36 @@ router.get(
   dashboardController.getDashboardSummary
 );
 
+/**
+ * @swagger
+ * /api/dashboard/daily-collection:
+ *   get:
+ *     summary: تقرير التوريد اليومي (مراقبة حركة المناديب والموردين)
+ *     description: يقارن بين الموردين النشطين وبين فواتير اليوم لمعرفة من تم التوريد منه ومن لم يورد بعد. يمكن الفلترة بالوردية.
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: تاريخ اليوم المطلوب (اختياري، الافتراضي هو اليوم الحالي)
+ *       - in: query
+ *         name: shift
+ *         schema:
+ *           type: string
+ *           enum: [MORNING, EVENING]
+ *         description: الوردية (اختياري)
+ *     responses:
+ *       200:
+ *         description: تقرير الموردين (قائمة من وردوا وقائمة من لم يوردوا)
+ */
+router.get(
+  '/daily-collection',
+  authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
+  dashboardController.getDailyCollectionReport
+);
+
 module.exports = router;
