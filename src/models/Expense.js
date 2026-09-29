@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * Expense Schema
- * Records daily financial outflows, linked to a specific category.
- */
 const expenseSchema = new mongoose.Schema(
   {
     category_id: {
@@ -20,7 +16,6 @@ const expenseSchema = new mongoose.Schema(
     date: {
       type: Date,
       default: Date.now,
-      // Allowing backdated expenses for accurate historical accounting
     },
     shift: {
       type: String,
@@ -30,7 +25,7 @@ const expenseSchema = new mongoose.Schema(
     notes: {
       type: String,
       trim: true,
-      default: null, // Specific details like "Electricity bill for March"
+      default: null,
     },
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
@@ -40,5 +35,7 @@ const expenseSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+expenseSchema.index({ date: -1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);

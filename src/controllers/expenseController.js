@@ -17,10 +17,15 @@ const getAllExpenses = asyncHandler(async (req, res) => {
     filter.category_id = req.query.category_id;
   }
   
-  const expenses = await expenseService.getAllExpenses(filter);
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+
+  const result = await expenseService.getAllExpenses(filter, page, limit);
+  
   res.status(200).json({
-    count: expenses.length,
-    data: expenses
+    message: 'تم جلب المصروفات بنجاح',
+    data: result.expenses,
+    pagination: result.pagination
   });
 });
 

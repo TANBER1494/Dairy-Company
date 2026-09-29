@@ -72,7 +72,12 @@ const generalLimiter = rateLimit({
   max: 1000, 
   message: 'تم تجاوز الحد المسموح من الطلبات، يرجى المحاولة بعد قليل'
 });
-app.use('/api', generalLimiter);
+
+if (process.env.DISABLE_RATE_LIMIT !== 'true') {
+  app.use('/api', generalLimiter);
+} else {
+  console.warn('⚠️ تنبيه: تم إيقاف Rate Limiter لأغراض الاختبار');
+}
 
 // Body Parsing & Data Sanitization
 app.use(express.json({ limit: '100kb' })); 
@@ -136,6 +141,7 @@ server.listen(PORT, () => {
 process.on('unhandledRejection', (err) => {
   logger.error('UNHANDLED REJECTION! Shutting down gracefully...');
   logger.error(err.name, err.message);
+  console.error(err);
   server.close(() => {
     process.exit(1);
   });
@@ -144,5 +150,6 @@ process.on('unhandledRejection', (err) => {
 process.on('uncaughtException', (err) => {
   logger.error('UNCAUGHT EXCEPTION! Shutting down...');
   logger.error(err.name, err.message);
+  console.error(err);
   process.exit(1);
 });

@@ -1,0 +1,26 @@
+config:
+  target: 'http://localhost:5000'
+  phases:
+    - duration: 30
+      arrivalRate: 2 
+      rampTo: 10    
+      name: "محاكاة 10 محاسبين في الاستخدام الطبيعي"
+scenarios:
+  - name: "محاكاة عمل المحاسب الواقعي"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "test_admin"
+            password: "pass123"
+          capture:
+            - json: "$.token"
+              as: "auth_token"
+      - get:
+          url: "/api/dashboard/summary"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"
+      - get:
+          url: "/api/transactions?page=1&limit=50"
+          headers:
+            Authorization: "Bearer {{ auth_token }}"

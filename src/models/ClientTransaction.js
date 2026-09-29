@@ -70,4 +70,7 @@ const clientTransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+clientTransactionSchema.index({ client_id: 1, is_settled: 1 });
+clientTransactionSchema.index({ date: -1, shift: 1 });
+
 module.exports = mongoose.model('ClientTransaction', clientTransactionSchema);

@@ -1,11 +1,10 @@
+// cacheMiddleware.js
 const NodeCache = require('node-cache');
-
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 const cacheMiddleware = (duration) => {
   return (req, res, next) => {
-    if (req.method !== 'GET') {
-      console.error('لا يمكن تخزين طلبات غير GET');
+    if (process.env.DISABLE_CACHE === 'true' || req.method !== 'GET') {
       return next();
     }
 
@@ -31,7 +30,4 @@ const clearCache = (keyPattern) => {
   cache.del(keysToDelete);
 };
 
-module.exports = {
-  cacheMiddleware,
-  clearCache
-};
+module.exports = { cacheMiddleware, clearCache };

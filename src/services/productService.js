@@ -7,11 +7,13 @@ class ProductService {
     if (existingProduct) {
       throw new AppError('كود المنتج مسجل بالفعل', 400);
     }
+    
+    delete data.current_stock;
+    
     return await Product.create(data);
   }
 
   async getAllProducts(query = {}) {
-    // جلب المنتجات مع إمكانية التصفية (مثلاً: النشطة فقط)
     return await Product.find(query).sort({ code: 1 }).lean();
   }
 
@@ -30,6 +32,9 @@ class ProductService {
         throw new AppError('كود المنتج مستخدم لمنتج آخر', 400);
       }
     }
+
+    delete data.current_stock;
+    delete data.is_active;
 
     const product = await Product.findByIdAndUpdate(id, data, {
       new: true,

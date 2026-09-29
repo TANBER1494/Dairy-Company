@@ -16,11 +16,9 @@ class SupplierTransactionService {
     const total_price = qty * price;
 
     if (qty > 0 && product_id) {
-      const product = await Product.findById(product_id);
-      if (product) {
-        product.current_stock = (product.current_stock || 0) + qty;
-        await product.save();
-      }
+      await Product.findByIdAndUpdate(product_id, {
+        $inc: { current_stock: qty }
+      });
     }
 
     const transaction = await SupplierTransaction.create({
@@ -41,15 +39,33 @@ class SupplierTransactionService {
     return transaction;
   }
 
-  async getAllTransactions(query = {}) {
-    return await SupplierTransaction.find(query)
-      .populate('supplier_id', 'name code')
-      .populate('worker_id', 'name')
-      .populate('product_id', 'name')
-      .populate('created_by', 'name')
-      .populate('updated_by', 'name') 
-      .sort({ date: -1, createdAt: -1 })
-      .lean();
+  // دعم التقسيم (Pagination)
+  async getAllTransactions(query = {}, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+
+    const [transactions, totalItems] = await Promise.all([
+      SupplierTransaction.find(query)
+        .populate('supplier_id', 'name code')
+        .populate('worker_id', 'name')
+        .populate('product_id', 'name')
+        .populate('created_by', 'name')
+        .populate('updated_by', 'name') 
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SupplierTransaction.countDocuments(query)
+    ]);
+
+    return {
+      transactions,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        limit
+      }
+    };
   }
 
   async updateTransaction(id, data, userId) {
@@ -57,26 +73,22 @@ class SupplierTransactionService {
     if (!oldTx) throw new AppError('الفاتورة غير موجودة', 404);
     if (oldTx.is_settled) throw new AppError('لا يمكن تعديل فاتورة تم تصفية حسابها', 400);
 
-    if (oldTx.product_id && oldTx.quantity > 0) {
-      const oldProduct = await Product.findById(oldTx.product_id);
-      if (oldProduct) {
-        oldProduct.current_stock = oldProduct.current_stock - oldTx.quantity;
-        await oldProduct.save();
-      }
-    }
-
     const newProductId = data.product_id !== undefined ? data.product_id : oldTx.product_id;
     const qty = data.quantity !== undefined ? Number(data.quantity) : oldTx.quantity;
     const price = data.unit_price !== undefined ? Number(data.unit_price) : oldTx.unit_price;
     const paid = data.paid_amount !== undefined ? Number(data.paid_amount) : oldTx.paid_amount;
     const total_price = qty * price;
 
+    if (oldTx.product_id && oldTx.quantity > 0) {
+      await Product.findByIdAndUpdate(oldTx.product_id, {
+        $inc: { current_stock: -oldTx.quantity }
+      });
+    }
+
     if (qty > 0 && newProductId) {
-      const newProduct = await Product.findById(newProductId);
-      if (newProduct) {
-        newProduct.current_stock = newProduct.current_stock + qty;
-        await newProduct.save();
-      }
+      await Product.findByIdAndUpdate(newProductId, {
+        $inc: { current_stock: qty }
+      });
     }
 
     const updatedTx = await SupplierTransaction.findByIdAndUpdate(id, {
@@ -94,11 +106,9 @@ class SupplierTransactionService {
     if (tx.is_settled) throw new AppError('لا يمكن حذف فاتورة تم تصفية حسابها', 400);
 
     if (tx.product_id && tx.quantity > 0) {
-      const product = await Product.findById(tx.product_id);
-      if (product) {
-        product.current_stock = product.current_stock - tx.quantity;
-        await product.save();
-      }
+      await Product.findByIdAndUpdate(tx.product_id, {
+        $inc: { current_stock: -tx.quantity }
+      });
     }
 
     await tx.deleteOne();

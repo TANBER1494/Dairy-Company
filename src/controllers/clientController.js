@@ -30,8 +30,15 @@ const toggleClientStatus = asyncHandler(async (req, res) => {
 });
 
 const getClientStatement = asyncHandler(async (req, res) => {
-  const statement = await clientService.getClientStatement(req.params.key);
-  res.status(200).json({ message: 'تم استخراج كشف حساب العميل بنجاح', data: statement });
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+
+  const statement = await clientService.getClientStatement(req.params.key, page, limit);
+  
+  res.status(200).json({ 
+    message: 'تم استخراج كشف حساب العميل بنجاح', 
+    data: statement 
+  });
 });
 
 const settleClientAccount = asyncHandler(async (req, res) => {

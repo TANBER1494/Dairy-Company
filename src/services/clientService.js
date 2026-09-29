@@ -46,7 +46,7 @@ class ClientService {
     return client;
   }
 
-  async getClientStatement(searchKey) {
+  async getClientStatement(searchKey, page = 1, limit = 50) {
     let query = {};
     if (!isNaN(searchKey)) {
       query.code = Number(searchKey);
@@ -56,17 +56,33 @@ class ClientService {
     const client = await Client.findOne(query).lean();
     if (!client) throw new AppError('العميل غير موجود بهذا الكود أو الاسم', 404);
 
-    const transactions = await ClientTransaction.find({ client_id: client._id })
-      .populate('worker_id', 'name')
-      .populate('product_id', 'name')
-      .populate('created_by', 'name')
-      .sort({ date: -1, createdAt: -1 })
-      .lean();
+    const skip = (page - 1) * limit;
 
-    return { client_info: client, transactions_history: transactions };
+    const [transactions, totalItems] = await Promise.all([
+      ClientTransaction.find({ client_id: client._id })
+        .populate('worker_id', 'name')
+        .populate('product_id', 'name')
+        .populate('created_by', 'name')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      ClientTransaction.countDocuments({ client_id: client._id })
+    ]);
+
+    return { 
+      client_info: client, 
+      transactions_history: transactions,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        limit
+      }
+    };
   }
 
-async settleAccount(id, payload, userId) {
+  async settleAccount(id, payload, userId) {
     const client = await Client.findById(id);
     if (!client) throw new AppError('العميل غير موجود', 404);
 

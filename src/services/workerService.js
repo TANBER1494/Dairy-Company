@@ -3,6 +3,7 @@ const AppError = require('../utils/AppError');
 
 class WorkerService {
   async createWorker(data) {
+    delete data.is_active;
     return await Worker.create(data);
   }
 
@@ -17,6 +18,8 @@ class WorkerService {
   }
 
   async updateWorker(id, data) {
+    delete data.is_active;
+
     const worker = await Worker.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!worker) throw new AppError('العامل غير موجود', 404);
     return worker;

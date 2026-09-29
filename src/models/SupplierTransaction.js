@@ -70,4 +70,7 @@ const supplierTransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+supplierTransactionSchema.index({ supplier_id: 1, is_settled: 1 });
+supplierTransactionSchema.index({ date: -1, shift: 1 });
+
 module.exports = mongoose.model('SupplierTransaction', supplierTransactionSchema);

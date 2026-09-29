@@ -48,7 +48,7 @@ class SupplierService {
     return supplier;
   }
 
-  async getSupplierStatement(searchKey) {
+  async getSupplierStatement(searchKey, page = 1, limit = 50) {
     let query = {};
     if (!isNaN(searchKey)) {
       query.code = Number(searchKey);
@@ -58,17 +58,33 @@ class SupplierService {
     const supplier = await Supplier.findOne(query).lean();
     if (!supplier) throw new AppError('المورد غير موجود بهذا الكود أو الاسم', 404);
 
-    const transactions = await SupplierTransaction.find({ supplier_id: supplier._id })
-      .populate('worker_id', 'name')
-      .populate('product_id', 'name')
-      .populate('created_by', 'name')
-      .sort({ date: -1, createdAt: -1 })
-      .lean();
+    const skip = (page - 1) * limit;
+    
+    const [transactions, totalItems] = await Promise.all([
+      SupplierTransaction.find({ supplier_id: supplier._id })
+        .populate('worker_id', 'name')
+        .populate('product_id', 'name')
+        .populate('created_by', 'name')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SupplierTransaction.countDocuments({ supplier_id: supplier._id })
+    ]);
 
-    return { supplier_info: supplier, transactions_history: transactions };
+    return { 
+      supplier_info: supplier, 
+      transactions_history: transactions,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        limit
+      }
+    };
   }
 
-async settleAccount(id, payload, userId) {
+  async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 

@@ -10,7 +10,9 @@ class UserService {
       throw new AppError('يجب أن تتكون كلمة المرور من 6 أحرف كحد أدنى', 400);
     }
 
-    const existingUser = await User.findOne({ username: username.toLowerCase(), deleted_at: null });
+    const cleanUsername = username.toLowerCase().trim();
+
+    const existingUser = await User.findOne({ username: cleanUsername, deleted_at: null });
     if (existingUser) {
       throw new AppError('اسم المستخدم مسجل بالفعل، يرجى اختيار اسم آخر', 400);
     }
@@ -20,14 +22,16 @@ class UserService {
 
     const user = await User.create({
       name,
-      username,
+      username: cleanUsername,
       role,
       password_hash,
       phone
     });
 
-    user.password_hash = undefined;
-    return user;
+    const userResponse = user.toObject();
+    delete userResponse.password_hash;
+    
+    return userResponse;
   }
 
   async getAllUsers(query = {}) {

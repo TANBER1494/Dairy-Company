@@ -13,11 +13,16 @@ const createTransaction = asyncHandler(async (req, res) => {
 
 const getAllTransactions = asyncHandler(async (req, res) => {
   const filter = req.query.client_id ? { client_id: req.query.client_id } : {};
-  const transactions = await clientTransactionService.getAllTransactions(filter);
+  
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+
+  const result = await clientTransactionService.getAllTransactions(filter, page, limit);
   
   res.status(200).json({
-    count: transactions.length,
-    data: transactions
+    message: 'تم جلب الفواتير بنجاح',
+    data: result.transactions,
+    pagination: result.pagination
   });
 });
 

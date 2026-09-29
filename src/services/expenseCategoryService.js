@@ -5,6 +5,9 @@ class ExpenseCategoryService {
   async createCategory(data) {
     const existingCategory = await ExpenseCategory.findOne({ name: data.name });
     if (existingCategory) throw new AppError('فئة المصروفات مسجلة بالفعل', 400);
+    
+    delete data.is_active;
+    
     return await ExpenseCategory.create(data);
   }
 
@@ -13,6 +16,8 @@ class ExpenseCategoryService {
   }
 
   async updateCategory(id, data) {
+    delete data.is_active;
+    
     const category = await ExpenseCategory.findByIdAndUpdate(id, data, { new: true, runValidators: true });
     if (!category) throw new AppError('الفئة غير موجودة', 404);
     return category;

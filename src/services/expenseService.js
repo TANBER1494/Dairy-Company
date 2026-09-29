@@ -27,12 +27,29 @@ class ExpenseService {
     return expense;
   }
 
-  async getAllExpenses(query = {}) {
-    return await Expense.find(query)
-      .populate('category_id', 'name')
-      .populate('created_by', 'name username')
-      .sort({ date: -1, createdAt: -1 })
-      .lean();
+  async getAllExpenses(query = {}, page = 1, limit = 50) {
+    const skip = (page - 1) * limit;
+
+    const [expenses, totalItems] = await Promise.all([
+      Expense.find(query)
+        .populate('category_id', 'name')
+        .populate('created_by', 'name username')
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Expense.countDocuments(query)
+    ]);
+
+    return {
+      expenses,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        limit
+      }
+    };
   }
 
   async getExpenseById(id) {

@@ -1,3 +1,4 @@
+// productValidation.js
 const Joi = require('joi');
 
 const createProductSchema = Joi.object({
@@ -16,9 +17,8 @@ const createProductSchema = Joi.object({
     'number.base': 'السعر يجب أن يكون رقماً',
     'number.min': 'السعر لا يمكن أن يكون بالسالب'
   }),
-  current_stock: Joi.number().min(0).messages({
-    'number.base': 'الرصيد يجب أن يكون رقماً',
-    'number.min': 'الرصيد لا يمكن أن يكون بالسالب'
+  current_stock: Joi.any().forbidden().messages({
+    'any.unknown': 'غير مسموح بإدخال رصيد المخزن يدوياً'
   })
 });
 
@@ -34,9 +34,8 @@ const updateProductSchema = Joi.object({
     'number.base': 'السعر يجب أن يكون رقماً',
     'number.min': 'السعر لا يمكن أن يكون بالسالب'
   }),
-  current_stock: Joi.number().min(0).messages({
-    'number.base': 'الرصيد يجب أن يكون رقماً',
-    'number.min': 'الرصيد لا يمكن أن يكون بالسالب'
+  current_stock: Joi.any().forbidden().messages({
+    'any.unknown': 'غير مسموح بتعديل رصيد المخزن يدوياً'
   })
 }).min(1).messages({
   'object.min': 'يجب إرسال حقل واحد على الأقل للتحديث'

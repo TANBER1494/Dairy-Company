@@ -30,8 +30,15 @@ const toggleSupplierStatus = asyncHandler(async (req, res) => {
 });
 
 const getSupplierStatement = asyncHandler(async (req, res) => {
-  const statement = await supplierService.getSupplierStatement(req.params.key);
-  res.status(200).json({ message: 'تم استخراج كشف حساب المورد بنجاح', data: statement });
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+
+  const statement = await supplierService.getSupplierStatement(req.params.key, page, limit);
+  
+  res.status(200).json({ 
+    message: 'تم استخراج كشف حساب المورد بنجاح', 
+    data: statement 
+  });
 });
 
 const settleSupplierAccount = asyncHandler(async (req, res) => {

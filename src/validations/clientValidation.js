@@ -32,7 +32,21 @@ const updateClientSchema = Joi.object({
   'object.min': 'يجب إرسال حقل واحد على الأقل للتحديث'
 });
 
+const settleAccountSchema = Joi.object({
+  total_amount: Joi.number().min(0).required().messages({
+    'number.base': 'إجمالي المبلغ يجب أن يكون رقماً',
+    'number.min': 'لا يمكن أن يكون الإجمالي بالسالب',
+    'any.required': 'إجمالي المبلغ مطلوب'
+  }),
+  paid_amount: Joi.number().min(0).required().messages({
+    'number.base': 'المبلغ المدفوع يجب أن يكون رقماً',
+    'number.min': 'لا يمكن أن يكون المبلغ المدفوع بالسالب',
+    'any.required': 'المبلغ المدفوع مطلوب'
+  })
+});
+
 module.exports = {
   createClientSchema,
-  updateClientSchema
+  updateClientSchema,
+  settleAccountSchema
 };

@@ -2,15 +2,13 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // إعدادات متقدمة لإدارة الاتصالات (Connection Pooling)
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 20, // السماح بـ 20 اتصال متزامن لتخفيف الضغط
+      maxPoolSize: 150, 
       serverSelectionTimeoutMS: 5000,
     });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 
-    // مراقبة انقطاع الاتصال اللحظي
     mongoose.connection.on('disconnected', () => {
       console.warn('MongoDB disconnected! Attempting to reconnect...');
     });
@@ -19,7 +17,6 @@ const connectDB = async () => {
       console.log('MongoDB reconnected successfully.');
     });
 
-    // الإغلاق الآمن عند توقف السيرفر (Graceful Shutdown)
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
       console.log('MongoDB connection closed due to app termination');
