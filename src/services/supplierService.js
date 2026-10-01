@@ -88,43 +88,39 @@ async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 
-    // 1. حساب صافي اللبن والدفعات السابقة من الداتا بيز مباشرة
     const openTransactions = await SupplierTransaction.find({ supplier_id: id, is_settled: false });
     
-    let periodTotal = 0;
-    let periodPaid = 0;
+    let dbTotalPrices = 0;
+    let previousAdvances = 0;
     
     openTransactions.forEach(tx => {
-        periodTotal += (tx.total_price || 0);
-        periodPaid += (tx.paid_amount || 0);
+        dbTotalPrices += (tx.total_price || 0);
+        previousAdvances += (tx.paid_amount || 0);
     });
     
-    // 2. قراءة المبلغ الكاش الذي تم سداده "الآن" في نافذة التسوية
-    const paidNow = Number(payload.paid_amount) || 0;
+    const grossMilkValue = Number(payload.total_amount) || 0; 
+    const newPayment = Number(payload.paid_amount) || 0; 
 
-    // 3. تحديث الرصيد التراكمي بدقة
-    // الرصيد = ثمن اللبن - الدفعات القديمة - الدفعة الحالية (paidNow)
-    const periodNet = periodTotal - periodPaid - paidNow;
+    const periodNet = grossMilkValue - previousAdvances - newPayment;
     supplier.current_balance += periodNet;
     await supplier.save();
 
-    // 4. إغلاق الفواتير السابقة
     await SupplierTransaction.updateMany(
       { supplier_id: id, is_settled: false },
       { $set: { is_settled: true } }
     );
 
-    // 5. ضبط الوردية الحقيقية بناءً على توقيت مصر 
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
     const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
 
-    // 6. إنشاء حركة التصفية كـ (علامة قفل)
+    const missingMilkValue = grossMilkValue - dbTotalPrices;
+
     await SupplierTransaction.create({
       supplier_id: id,
       quantity: 0, 
       unit_price: 0,
-      total_price: 0, 
-      paid_amount: paidNow, 
+      total_price: missingMilkValue > 0 ? missingMilkValue : 0,
+      paid_amount: newPayment,  
       shift: currentShift,
       balance_after: supplier.current_balance,
       is_settled: true,   

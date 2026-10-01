@@ -88,17 +88,18 @@ async settleAccount(id, payload, userId) {
 
     const openTransactions = await ClientTransaction.find({ client_id: id, is_settled: false });
     
-    let periodTotal = 0;
-    let periodPaid = 0;
+    let dbTotalPrices = 0;
+    let previousAdvances = 0;
     
     openTransactions.forEach(tx => {
-        periodTotal += (tx.total_price || 0);
-        periodPaid += (tx.paid_amount || 0);
+        dbTotalPrices += (tx.total_price || 0);
+        previousAdvances += (tx.paid_amount || 0);
     });
     
-    const paidNow = Number(payload.paid_amount) || 0;
+    const grossMilkValue = Number(payload.total_amount) || 0; 
+    const newPayment = Number(payload.paid_amount) || 0;      
 
-    const periodNet = periodTotal - periodPaid - paidNow;
+    const periodNet = grossMilkValue - previousAdvances - newPayment;
     client.current_balance += periodNet;
     await client.save();
 
@@ -110,12 +111,14 @@ async settleAccount(id, payload, userId) {
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
     const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
 
+    const missingMilkValue = grossMilkValue - dbTotalPrices;
+
     await ClientTransaction.create({
       client_id: id,
       quantity: 0,
       unit_price: 0,
-      total_price: 0, 
-      paid_amount: paidNow,
+      total_price: missingMilkValue > 0 ? missingMilkValue : 0,
+      paid_amount: newPayment,
       shift: currentShift,
       balance_after: client.current_balance,
       is_settled: true,
