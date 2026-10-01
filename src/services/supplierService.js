@@ -84,30 +84,43 @@ class SupplierService {
     };
   }
 
-  async settleAccount(id, payload, userId) {
+ async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 
-    const total = Number(payload.total_amount) || 0;
-    const paid = Number(payload.paid_amount) || 0;
+    // 1. حساب صافي الفترة المفتوحة من الداتا بيز مباشرة (أمان تام ومنعاً للازدواج)
+    const openTransactions = await SupplierTransaction.find({ supplier_id: id, is_settled: false });
+    
+    let periodTotal = 0;
+    let periodPaid = 0;
+    
+    openTransactions.forEach(tx => {
+        periodTotal += (tx.total_price || 0);
+        periodPaid += (tx.paid_amount || 0);
+    });
+    
+    const periodNet = periodTotal - periodPaid; // الصافي المستحق للمورد
 
-    supplier.current_balance = supplier.current_balance + total - paid;
+    // 2. تحديث الرصيد التراكمي
+    supplier.current_balance += periodNet;
     await supplier.save();
 
+    // 3. إغلاق الفواتير السابقة
     await SupplierTransaction.updateMany(
       { supplier_id: id, is_settled: false },
       { $set: { is_settled: true } }
     );
 
+    // 4. إنشاء حركة التصفية كـ (علامة قفل) بأصفار حتى لا تتضاعف الأرقام في الداشبورد
     await SupplierTransaction.create({
       supplier_id: id,
       quantity: 0, 
       unit_price: 0,
-      total_price: total, 
-      paid_amount: paid,  
+      total_price: 0,
+      paid_amount: 0,
       balance_after: supplier.current_balance,
       is_settled: true,   
-      notes: "تصفية حساب وتقفيل الكيلوهات السابقة",
+      notes: "تسوية وقفل دفتر",
       created_by: userId
     });
 

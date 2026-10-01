@@ -82,30 +82,43 @@ class ClientService {
     };
   }
 
-  async settleAccount(id, payload, userId) {
+async settleAccount(id, payload, userId) {
     const client = await Client.findById(id);
     if (!client) throw new AppError('العميل غير موجود', 404);
 
-    const total = Number(payload.total_amount) || 0;
-    const paid = Number(payload.paid_amount) || 0;
+    // 1. حساب صافي الفترة المفتوحة من الداتا بيز مباشرة
+    const openTransactions = await ClientTransaction.find({ client_id: id, is_settled: false });
+    
+    let periodTotal = 0;
+    let periodPaid = 0;
+    
+    openTransactions.forEach(tx => {
+        periodTotal += (tx.total_price || 0);
+        periodPaid += (tx.paid_amount || 0);
+    });
+    
+    const periodNet = periodTotal - periodPaid; // الصافي المستحق على العميل
 
-    client.current_balance = client.current_balance + total - paid;
+    // 2. تحديث الرصيد التراكمي
+    client.current_balance += periodNet;
     await client.save();
 
+    // 3. إغلاق الفواتير السابقة
     await ClientTransaction.updateMany(
       { client_id: id, is_settled: false },
       { $set: { is_settled: true } }
     );
 
+    // 4. إنشاء حركة التصفية كـ (علامة قفل) بأصفار
     await ClientTransaction.create({
       client_id: id,
       quantity: 0,
       unit_price: 0,
-      total_price: total,
-      paid_amount: paid,
+      total_price: 0,
+      paid_amount: 0,
       balance_after: client.current_balance,
       is_settled: true,
-      notes: "تصفية حساب وتقفيل الكيلوهات السابقة",
+      notes: "تسوية وقفل دفتر",
       created_by: userId
     });
 
