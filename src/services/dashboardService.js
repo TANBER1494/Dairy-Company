@@ -79,7 +79,7 @@ class DashboardService {
     };
   }
 
-  async getDailyCollectionReport(query) {
+async getDailyCollectionReport(query) {
     const targetDate = query.date ? new Date(query.date) : new Date();
     const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
@@ -100,12 +100,13 @@ class DashboardService {
     const suppliedSupplierIds = [...new Set(todayTransactions.map(tx => tx.supplier_id.toString()))];
 
     const targetSuppliers = await Supplier.find({
+      createdAt: { $lte: endOfDay }, 
       $or: [
         { is_active: true },
         { _id: { $in: suppliedSupplierIds } }
       ]
     })
-      .select('name code phone address is_active')
+      .select('name code phone address is_active createdAt')
       .lean();
 
     const supplied = [];
@@ -128,7 +129,7 @@ class DashboardService {
     return {
       date: startOfDay.toISOString().split('T')[0],
       shift: query.shift || 'ALL',
-      totalTargetSuppliers: targetSuppliers.length,
+      totalActiveSuppliers: targetSuppliers.length,
       suppliedCount: supplied.length,
       pendingCount: pending.length,
       supplied,
