@@ -92,24 +92,27 @@ class DashboardService {
       txQuery.shift = query.shift;
     }
 
-    const activeSuppliers = await Supplier.find({ is_active: true })
-      .select('name code phone address')
-      .lean();
-
     const todayTransactions = await SupplierTransaction.find(txQuery)
       .populate('worker_id', 'name')
       .populate('product_id', 'name')
       .lean();
 
-    const suppliedSupplierIds = new Set(
-      todayTransactions.map(tx => tx.supplier_id.toString())
-    );
+    const suppliedSupplierIds = [...new Set(todayTransactions.map(tx => tx.supplier_id.toString()))];
+
+    const targetSuppliers = await Supplier.find({
+      $or: [
+        { is_active: true },
+        { _id: { $in: suppliedSupplierIds } }
+      ]
+    })
+      .select('name code phone address is_active')
+      .lean();
 
     const supplied = [];
     const pending = [];
 
-    activeSuppliers.forEach(supplier => {
-      if (suppliedSupplierIds.has(supplier._id.toString())) {
+    targetSuppliers.forEach(supplier => {
+      if (suppliedSupplierIds.includes(supplier._id.toString())) {
         const supplierTx = todayTransactions.filter(
           tx => tx.supplier_id.toString() === supplier._id.toString()
         );
@@ -125,7 +128,7 @@ class DashboardService {
     return {
       date: startOfDay.toISOString().split('T')[0],
       shift: query.shift || 'ALL',
-      totalActiveSuppliers: activeSuppliers.length,
+      totalTargetSuppliers: targetSuppliers.length,
       suppliedCount: supplied.length,
       pendingCount: pending.length,
       supplied,
