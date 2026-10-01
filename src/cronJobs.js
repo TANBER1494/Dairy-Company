@@ -2,11 +2,32 @@ const cron = require('node-cron');
 const dashboardService = require('./services/dashboardService');
 const Notification = require('./models/Notification');
 const socket = require('./models/socket');
+const DailyReport = require('./models/DailyReport'); 
+const logger = require('./utils/logger');
 
 const startCronJobs = () => {
   cron.schedule('59 11 * * *', async () => {
     console.log('[CRON] إعداد تقرير الوردية الصباحية...');
     await generateShiftReport('MORNING', 'الوردية الصباحية');
+  });
+
+  cron.schedule('55 23 * * *', async () => {
+    try {
+      console.log('[CRON] بدء عملية أرشفة التوريد اليومي (Daily Snapshot)...');
+      
+      const today = new Date();
+      const reportData = await dashboardService.calculateLiveDailyReport(today);
+      
+      await DailyReport.findOneAndUpdate(
+        { date_string: reportData.date_string },
+        reportData,
+        { upsert: true, new: true }
+      );
+      
+      console.log(`[CRON] تم حفظ أرشيف التوريد بنجاح ليوم: ${reportData.date_string}`);
+    } catch (error) {
+      console.error('[CRON] خطأ أثناء حفظ أرشيف التوريد اليومي:', error.message);
+    }
   });
 
   cron.schedule('59 23 * * *', async () => {

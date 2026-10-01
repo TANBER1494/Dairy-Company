@@ -4,8 +4,16 @@ const Expense = require('../models/Expense');
 const Supplier = require('../models/Supplier');
 const Client = require('../models/Client');
 const Product = require('../models/Product');
+const DailyReport = require('../models/DailyReport');
 
 class DashboardService {
+  _getLocalDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   async getSummary(query) {
     let matchStage = {};
     let expenseMatchStage = {};
@@ -79,18 +87,12 @@ class DashboardService {
     };
   }
 
-async getDailyCollectionReport(query) {
-    const targetDate = query.date ? new Date(query.date) : new Date();
+  async calculateLiveDailyReport(targetDate, shift = null) {
     const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
-    const txQuery = {
-      date: { $gte: startOfDay, $lte: endOfDay }
-    };
-
-    if (query.shift) {
-      txQuery.shift = query.shift;
-    }
+    const txQuery = { date: { $gte: startOfDay,$lte: endOfDay } };
+    if (shift) txQuery.shift = shift;
 
     const todayTransactions = await SupplierTransaction.find(txQuery)
       .populate('worker_id', 'name')
@@ -100,14 +102,11 @@ async getDailyCollectionReport(query) {
     const suppliedSupplierIds = [...new Set(todayTransactions.map(tx => tx.supplier_id.toString()))];
 
     const targetSuppliers = await Supplier.find({
-      createdAt: { $lte: endOfDay }, 
       $or: [
         { is_active: true },
         { _id: { $in: suppliedSupplierIds } }
       ]
-    })
-      .select('name code phone address is_active createdAt')
-      .lean();
+    }).select('name code phone address is_active').lean();
 
     const supplied = [];
     const pending = [];
@@ -117,24 +116,40 @@ async getDailyCollectionReport(query) {
         const supplierTx = todayTransactions.filter(
           tx => tx.supplier_id.toString() === supplier._id.toString()
         );
-        supplied.push({
-          supplier,
-          transactions: supplierTx 
-        });
+        supplied.push({ supplier, transactions: supplierTx });
       } else {
         pending.push(supplier);
       }
     });
 
     return {
-      date: startOfDay.toISOString().split('T')[0],
-      shift: query.shift || 'ALL',
+      date_string: this._getLocalDateString(startOfDay),
+      shift: shift || 'ALL',
       totalActiveSuppliers: targetSuppliers.length,
       suppliedCount: supplied.length,
       pendingCount: pending.length,
       supplied,
       pending
     };
+  }
+
+  async getDailyCollectionReport(query) {
+    const requestDate = query.date ? new Date(query.date) : new Date();
+    
+    const dateString = this._getLocalDateString(requestDate);
+    const todayString = this._getLocalDateString(new Date());
+
+    if (dateString === todayString) {
+      return await this.calculateLiveDailyReport(requestDate, query.shift);
+    } 
+    
+    const archivedReport = await DailyReport.findOne({ date_string: dateString }).lean();
+    
+    if (archivedReport) {
+      return archivedReport;
+    } else {
+      return await this.calculateLiveDailyReport(requestDate, query.shift);
+    }
   }
 }
 
