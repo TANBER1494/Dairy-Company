@@ -88,21 +88,13 @@ async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 
-    const openTransactions = await SupplierTransaction.find({ supplier_id: id, is_settled: false });
-    
-    let dbTotalPrices = 0;
-    let previousAdvances = 0;
-    
-    openTransactions.forEach(tx => {
-        dbTotalPrices += (tx.total_price || 0);
-        previousAdvances += (tx.paid_amount || 0);
-    });
-    
-    const grossMilkValue = Number(payload.total_amount) || 0; 
-    const newPayment = Number(payload.paid_amount) || 0; 
+    const totalAmountFromFrontend = Number(payload.total_amount) || 0; 
+    const paidNow = Number(payload.paid_amount) || 0; 
 
-    const periodNet = grossMilkValue - previousAdvances - newPayment;
-    supplier.current_balance += periodNet;
+    let missingMilkValue = totalAmountFromFrontend - supplier.current_balance;
+    if (missingMilkValue < 0) missingMilkValue = 0; 
+
+    supplier.current_balance = totalAmountFromFrontend - paidNow;
     await supplier.save();
 
     await SupplierTransaction.updateMany(
@@ -113,14 +105,12 @@ async settleAccount(id, payload, userId) {
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
     const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
 
-    const missingMilkValue = grossMilkValue - dbTotalPrices;
-
     await SupplierTransaction.create({
       supplier_id: id,
       quantity: 0, 
       unit_price: 0,
-      total_price: missingMilkValue > 0 ? missingMilkValue : 0,
-      paid_amount: newPayment,  
+      total_price: missingMilkValue, 
+      paid_amount: paidNow,          
       shift: currentShift,
       balance_after: supplier.current_balance,
       is_settled: true,   
