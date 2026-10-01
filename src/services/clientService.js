@@ -86,7 +86,6 @@ async settleAccount(id, payload, userId) {
     const client = await Client.findById(id);
     if (!client) throw new AppError('العميل غير موجود', 404);
 
-    // 1. حساب صافي الفترة المفتوحة من الداتا بيز مباشرة
     const openTransactions = await ClientTransaction.find({ client_id: id, is_settled: false });
     
     let periodTotal = 0;
@@ -97,25 +96,27 @@ async settleAccount(id, payload, userId) {
         periodPaid += (tx.paid_amount || 0);
     });
     
-    const periodNet = periodTotal - periodPaid; // الصافي المستحق على العميل
+    const paidNow = Number(payload.paid_amount) || 0;
 
-    // 2. تحديث الرصيد التراكمي
+    const periodNet = periodTotal - periodPaid - paidNow;
     client.current_balance += periodNet;
     await client.save();
 
-    // 3. إغلاق الفواتير السابقة
     await ClientTransaction.updateMany(
       { client_id: id, is_settled: false },
       { $set: { is_settled: true } }
     );
 
-    // 4. إنشاء حركة التصفية كـ (علامة قفل) بأصفار
+    const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
+    const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
+
     await ClientTransaction.create({
       client_id: id,
       quantity: 0,
       unit_price: 0,
-      total_price: 0,
-      paid_amount: 0,
+      total_price: 0, 
+      paid_amount: paidNow,
+      shift: currentShift,
       balance_after: client.current_balance,
       is_settled: true,
       notes: "تسوية وقفل دفتر",

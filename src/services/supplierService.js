@@ -84,11 +84,11 @@ class SupplierService {
     };
   }
 
- async settleAccount(id, payload, userId) {
+async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 
-    // 1. حساب صافي الفترة المفتوحة من الداتا بيز مباشرة (أمان تام ومنعاً للازدواج)
+    // 1. حساب صافي اللبن والدفعات السابقة من الداتا بيز مباشرة
     const openTransactions = await SupplierTransaction.find({ supplier_id: id, is_settled: false });
     
     let periodTotal = 0;
@@ -99,25 +99,33 @@ class SupplierService {
         periodPaid += (tx.paid_amount || 0);
     });
     
-    const periodNet = periodTotal - periodPaid; // الصافي المستحق للمورد
+    // 2. قراءة المبلغ الكاش الذي تم سداده "الآن" في نافذة التسوية
+    const paidNow = Number(payload.paid_amount) || 0;
 
-    // 2. تحديث الرصيد التراكمي
+    // 3. تحديث الرصيد التراكمي بدقة
+    // الرصيد = ثمن اللبن - الدفعات القديمة - الدفعة الحالية (paidNow)
+    const periodNet = periodTotal - periodPaid - paidNow;
     supplier.current_balance += periodNet;
     await supplier.save();
 
-    // 3. إغلاق الفواتير السابقة
+    // 4. إغلاق الفواتير السابقة
     await SupplierTransaction.updateMany(
       { supplier_id: id, is_settled: false },
       { $set: { is_settled: true } }
     );
 
-    // 4. إنشاء حركة التصفية كـ (علامة قفل) بأصفار حتى لا تتضاعف الأرقام في الداشبورد
+    // 5. ضبط الوردية الحقيقية بناءً على توقيت مصر 
+    const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
+    const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
+
+    // 6. إنشاء حركة التصفية كـ (علامة قفل)
     await SupplierTransaction.create({
       supplier_id: id,
       quantity: 0, 
       unit_price: 0,
-      total_price: 0,
-      paid_amount: 0,
+      total_price: 0, 
+      paid_amount: paidNow, 
+      shift: currentShift,
       balance_after: supplier.current_balance,
       is_settled: true,   
       notes: "تسوية وقفل دفتر",
