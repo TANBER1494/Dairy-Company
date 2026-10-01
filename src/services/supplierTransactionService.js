@@ -39,7 +39,6 @@ class SupplierTransactionService {
     return transaction;
   }
 
-  // دعم التقسيم (Pagination)
   async getAllTransactions(query = {}, page = 1, limit = 50) {
     const skip = (page - 1) * limit;
 
@@ -80,6 +79,24 @@ class SupplierTransactionService {
     const total_price = qty * price;
 
     if (oldTx.product_id && oldTx.quantity > 0) {
+      const oldProduct = await Product.findById(oldTx.product_id);
+      if (!oldProduct) throw new AppError('المنتج المرتبط بهذه الفاتورة غير موجود', 404);
+
+      if (newProductId && newProductId.toString() === oldTx.product_id.toString()) {
+        if (qty < oldTx.quantity) {
+          const deduction = oldTx.quantity - qty; // الكمية التي سيتم سحبها من المخزن
+          if (oldProduct.current_stock < deduction) {
+            throw new AppError(`لا يمكن تقليل كمية الفاتورة. تم بيع جزء من هذا التوريد، وأقصى كمية يمكن خصمها من المخزن حالياً هي: ${oldProduct.current_stock}`, 400);
+          }
+        }
+      } else {
+        if (oldProduct.current_stock < oldTx.quantity) {
+          throw new AppError(`لا يمكن تغيير المنتج. تم بيع جزء من التوريد القديم، ورصيد المخزن الحالي (${oldProduct.current_stock}) لا يغطي الكمية المراد سحبها (${oldTx.quantity})`, 400);
+        }
+      }
+    }
+
+    if (oldTx.product_id && oldTx.quantity > 0) {
       await Product.findByIdAndUpdate(oldTx.product_id, {
         $inc: { current_stock: -oldTx.quantity }
       });
@@ -106,6 +123,13 @@ class SupplierTransactionService {
     if (tx.is_settled) throw new AppError('لا يمكن حذف فاتورة تم تصفية حسابها', 400);
 
     if (tx.product_id && tx.quantity > 0) {
+      const product = await Product.findById(tx.product_id);
+      if (!product) throw new AppError('المنتج المرتبط بهذه الفاتورة غير موجود', 404);
+
+      if (product.current_stock < tx.quantity) {
+        throw new AppError(`لا يمكن حذف هذه الفاتورة. تم بيع جزء من التوريد للعملاء، ورصيد المخزن الحالي (${product.current_stock}) أقل من كمية الفاتورة (${tx.quantity}).`, 400);
+      }
+
       await Product.findByIdAndUpdate(tx.product_id, {
         $inc: { current_stock: -tx.quantity }
       });

@@ -9,6 +9,10 @@ const Client = require('../models/Client');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Worker = require('../models/Worker');
+const SupplierTransaction = require('../models/SupplierTransaction');
+const ClientTransaction = require('../models/ClientTransaction');
+const Expense = require('../models/Expense');
+const DailyReport = require('../models/DailyReport');
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
@@ -23,7 +27,11 @@ const seedDatabase = async () => {
     await Product.deleteMany();
     await User.deleteMany();
     await Worker.deleteMany();
-    console.log('🧹 تم تنظيف الجداول بالكامل.');
+    await SupplierTransaction.deleteMany();
+    await ClientTransaction.deleteMany();
+    await Expense.deleteMany();
+    await DailyReport.deleteMany();
+    console.log('🧹 تم تنظيف الجداول بالكامل (شاملة الفواتير والمصروفات والأرشيف).');
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash('admin123456', salt);
@@ -45,9 +53,7 @@ const seedDatabase = async () => {
       },
     ];
     await User.insertMany(usersData);
-    console.log(
-      '✅ تم إنشاء حسابات النظام (admin, acc) بكلمة مرور: admin123456'
-    );
+    console.log('✅ تم إنشاء حسابات النظام (admin, acc) بكلمة مرور: admin123456');
 
     const workersData = [
       { name: 'عامل توصيل 1', phone: '01222222222' },
@@ -105,7 +111,9 @@ const seedDatabase = async () => {
         phone: row[3] ? String(row[3]).trim() : 'غير مسجل',
         current_balance: 0,
       }));
-    suppliersData = Array.from(new Map(suppliersData.map(item => [item.code, item])).values());
+      
+    suppliersData = Array.from(new Map(suppliersData.map(item => [item.code, item])).values()).slice(0, 50);
+    
     if (suppliersData.length) await Supplier.insertMany(suppliersData);
     console.log(`✅ تم زراعة ${suppliersData.length} مورد.`);
 
@@ -122,9 +130,7 @@ const seedDatabase = async () => {
     if (clientsData.length) await Client.insertMany(clientsData);
     console.log(`✅ تم زراعة ${clientsData.length} عميل (محل).`);
 
-    console.log(
-      '🎉 تمت عملية الزراعة بالكامل بنجاح! يمكنك تشغيل السيرفر وتسليم المشروع الآن.'
-    );
+    console.log('🎉 تمت عملية الزراعة بالكامل بنجاح! قاعدة البيانات الآن نظيفة وجاهزة.');
     process.exit();
   } catch (error) {
     console.error('❌ حدث خطأ أثناء الزراعة:', error);

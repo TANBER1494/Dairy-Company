@@ -16,6 +16,13 @@ class ClientTransactionService {
     const total_price = qty * price;
 
     if (qty > 0 && product_id) {
+      const product = await Product.findById(product_id);
+      if (!product) throw new AppError('المنتج غير موجود', 404);
+
+      if (product.current_stock < qty) {
+        throw new AppError(`عفواً، رصيد المخزن لا يكفي. المتاح: ${product.current_stock}، والمطلوب: ${qty}`, 400);
+      }
+
       await Product.findByIdAndUpdate(product_id, {
         $inc: { current_stock: -qty }
       });
@@ -77,6 +84,21 @@ class ClientTransactionService {
     const price = data.unit_price !== undefined ? Number(data.unit_price) : oldTx.unit_price;
     const paid = data.paid_amount !== undefined ? Number(data.paid_amount) : oldTx.paid_amount;
     const total_price = qty * price;
+
+    if (qty > 0 && newProductId) {
+      const product = await Product.findById(newProductId);
+      if (!product) throw new AppError('المنتج غير موجود', 404);
+
+      let availableStock = product.current_stock;
+
+      if (oldTx.product_id && oldTx.product_id.toString() === newProductId.toString()) {
+        availableStock += oldTx.quantity;
+      }
+
+      if (availableStock < qty) {
+        throw new AppError(`عفواً، رصيد المخزن لا يكفي لتعديل الفاتورة. أقصى كمية متاحة لك هي: ${availableStock}`, 400);
+      }
+    }
 
     if (oldTx.product_id && oldTx.quantity > 0) {
       await Product.findByIdAndUpdate(oldTx.product_id, {
