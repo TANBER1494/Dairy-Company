@@ -21,6 +21,11 @@ class SupplierTransactionService {
       });
     }
 
+    const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
+    const autoShift = (currentHour >= 4 && currentHour < 16) ? 'MORNING' : 'EVENING';
+    
+    const finalShift = shift || autoShift;
+
     const transaction = await SupplierTransaction.create({
       supplier_id,
       worker_id: worker_id || null,
@@ -30,7 +35,7 @@ class SupplierTransactionService {
       total_price,
       paid_amount: paid,
       balance_after: supplier.current_balance, 
-      shift,
+      shift: finalShift,
       notes,
       date: date || Date.now(),
       created_by: userId

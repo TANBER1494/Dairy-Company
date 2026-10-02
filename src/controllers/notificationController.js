@@ -39,9 +39,26 @@ const deleteNotification = asyncHandler(async (req, res, next) => {
   res.status(200).json({ message: 'تم حذف الإشعار' });
 });
 
+
+const deleteAllNotifications = asyncHandler(async (req, res, next) => {
+  const { role, _id } = req.user;
+  
+  const query = {
+    $or: [
+      { target_role: role },
+      { target_user_id: _id }
+    ]
+  };
+
+  await Notification.deleteMany(query);
+  res.status(200).json({ message: 'تم مسح جميع الإشعارات بنجاح لتنظيف الشاشة' });
+});
+
+
 module.exports = { 
   getNotifications, 
   markAsRead, 
   markAllAsRead, 
-  deleteNotification 
+  deleteNotification ,
+  deleteAllNotifications
 };

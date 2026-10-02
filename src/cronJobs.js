@@ -6,17 +6,19 @@ const DailyReport = require('./models/DailyReport');
 const logger = require('./utils/logger');
 
 const startCronJobs = () => {
-  cron.schedule('59 11 * * *', async () => {
-    console.log('[CRON] إعداد تقرير الوردية الصباحية...');
-    await generateShiftReport('MORNING', 'الوردية الصباحية');
+  cron.schedule('59 15 * * *', async () => {
+    console.log('[CRON] إرسال إشعار انتهاء الوردية الصباحية...');
+    await sendShiftNotification('الوردية الصباحية', 'الوردية المسائية');
   });
 
-  cron.schedule('55 23 * * *', async () => {
+  cron.schedule('55 3 * * *', async () => {
     try {
       console.log('[CRON] بدء عملية أرشفة التوريد اليومي (Daily Snapshot)...');
       
-      const today = new Date();
-      const reportData = await dashboardService.calculateLiveDailyReport(today);
+      const workingDate = new Date();
+      workingDate.setHours(workingDate.getHours() - 4); 
+
+      const reportData = await dashboardService.calculateLiveDailyReport(workingDate);
       
       await DailyReport.findOneAndUpdate(
         { date_string: reportData.date_string },
@@ -24,24 +26,22 @@ const startCronJobs = () => {
         { upsert: true, new: true }
       );
       
-      console.log(`[CRON] تم حفظ أرشيف التوريد بنجاح ليوم: ${reportData.date_string}`);
+      console.log(`[CRON] تم حفظ أرشيف التوريد بنجاح ليوم العمل: ${reportData.date_string}`);
     } catch (error) {
       console.error('[CRON] خطأ أثناء حفظ أرشيف التوريد اليومي:', error.message);
     }
   });
 
-  cron.schedule('59 23 * * *', async () => {
-    console.log('[CRON] إعداد تقرير الوردية المسائية...');
-    await generateShiftReport('EVENING', 'الوردية المسائية');
+  cron.schedule('59 3 * * *', async () => {
+    console.log('[CRON] إرسال إشعار انتهاء الوردية المسائية...');
+    await sendShiftNotification('الوردية المسائية', 'الوردية الصباحية');
   });
 };
 
-async function generateShiftReport(shiftCode, shiftName) {
+async function sendShiftNotification(endedShift, startedShift) {
   try {
-    const report = await dashboardService.getDailyCollectionReport({ shift: shiftCode });
-
-    const title = `تقرير توريد ${shiftName}`;
-    const message = `انتهت ${shiftName}. تم التوريد من ${report.suppliedCount} مورد، ومتبقي ${report.pendingCount} مورد لم يوردوا.`;
+    const title = `تبديل الورديات`;
+    const message = `انتهت ${endedShift} وبدأت الآن ${startedShift}.`;
 
     const targetRoles = ['Admin', 'GeneralAccountant', 'InventoryAccountant'];
     
@@ -49,8 +49,8 @@ async function generateShiftReport(shiftCode, shiftName) {
       target_role: role,
       title,
       message,
-      type: 'SUPPLIER_DELIVERY',
-      link: '/dashboard/daily-collection' 
+      type: 'SHIFT_CHANGE',
+      link: '/dashboard' 
     }));
 
     const createdNotifications = await Notification.insertMany(notificationsToInsert);
@@ -62,9 +62,9 @@ async function generateShiftReport(shiftCode, shiftName) {
       });
     }
 
-    console.log(`[CRON] تم إرسال إشعارات ${shiftName} بنجاح.`);
+    console.log(`[CRON] تم إرسال إشعارات تبديل الوردية بنجاح.`);
   } catch (error) {
-    console.error(`[CRON] خطأ أثناء إنشاء إشعار ${shiftName}:`, error.message);
+    console.error(`[CRON] خطأ أثناء إنشاء إشعار تبديل الوردية:`, error.message);
   }
 }
 

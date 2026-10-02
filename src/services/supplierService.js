@@ -84,7 +84,7 @@ class SupplierService {
     };
   }
 
-async settleAccount(id, payload, userId) {
+  async settleAccount(id, payload, userId) {
     const supplier = await Supplier.findById(id);
     if (!supplier) throw new AppError('المورد غير موجود', 404);
 
@@ -103,7 +103,7 @@ async settleAccount(id, payload, userId) {
     );
 
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
-    const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
+    const currentShift = (currentHour >= 4 && currentHour < 16) ? 'MORNING' : 'EVENING';
 
     await SupplierTransaction.create({
       supplier_id: id,

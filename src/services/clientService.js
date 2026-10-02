@@ -82,7 +82,7 @@ class ClientService {
     };
   }
 
-async settleAccount(id, payload, userId) {
+  async settleAccount(id, payload, userId) {
     const client = await Client.findById(id);
     if (!client) throw new AppError('العميل غير موجود', 404);
 
@@ -101,7 +101,7 @@ async settleAccount(id, payload, userId) {
     );
 
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
-    const currentShift = (currentHour >= 12) ? 'EVENING' : 'MORNING';
+    const currentShift = (currentHour >= 4 && currentHour < 16) ? 'MORNING' : 'EVENING';
 
     await ClientTransaction.create({
       client_id: id,

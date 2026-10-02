@@ -28,6 +28,11 @@ class ClientTransactionService {
       });
     }
 
+    const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
+    const autoShift = (currentHour >= 4 && currentHour < 16) ? 'MORNING' : 'EVENING';
+    
+    const finalShift = shift || autoShift;
+
     const transaction = await ClientTransaction.create({
       client_id,
       worker_id: worker_id || null,
@@ -37,7 +42,7 @@ class ClientTransactionService {
       total_price,
       paid_amount: paid,
       balance_after: client.current_balance,
-      shift,
+      shift: finalShift,
       notes,
       date: date || Date.now(),
       created_by: userId
