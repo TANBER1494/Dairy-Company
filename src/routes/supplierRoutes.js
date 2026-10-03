@@ -223,7 +223,7 @@ router.patch(
  */
 router.post(
   '/:id/settle',
-  authorize('Admin', 'GeneralAccountant'),
+  authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
   supplierController.settleSupplierAccount
 );
 

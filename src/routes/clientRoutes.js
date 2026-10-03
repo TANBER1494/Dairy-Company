@@ -74,7 +74,7 @@ router
   .route('/')
   .get(clientController.getAllClients)
   .post(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
     validateRequest(createClientSchema),
     clientController.createClient
   );
@@ -104,7 +104,7 @@ router
 router
   .route('/statement/:key')
   .get(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
     clientController.getClientStatement
   );
 
@@ -157,7 +157,7 @@ router
   .route('/:id')
   .get(clientController.getClientById)
   .put(
-    authorize('Admin', 'GeneralAccountant'),
+    authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
     validateRequest(updateClientSchema),
     clientController.updateClient
   );
@@ -182,7 +182,7 @@ router
  */
 router
   .patch('/:id/toggle-status',
-    authorize('Admin'),
+    authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
     clientController.toggleClientStatus
   );
 
@@ -220,7 +220,7 @@ router
  */
 router.post(
   '/:id/settle',
-  authorize('Admin', 'GeneralAccountant'),
+  authorize('Admin', 'GeneralAccountant', 'InventoryAccountant'),
   clientController.settleClientAccount
 );
 
