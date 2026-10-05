@@ -30,8 +30,17 @@ const runManualArchive = asyncHandler(async (req, res) => {
   });
 });
 
+const runShiftNotification = asyncHandler(async (req, res) => {
+  const result = await dashboardService.triggerShiftNotification();
+  
+  res.status(200).json({
+    message: `تم إرسال إشعارات انتهاء ${result.endedShift} بنجاح`
+  });
+});
+
 module.exports = {
   getDashboardSummary,
   getDailyCollectionReport,
-  runManualArchive
+  runManualArchive,
+  runShiftNotification
 };

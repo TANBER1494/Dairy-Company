@@ -37,7 +37,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 // Socket and Cron Jobs
 const socket = require('./models/socket');
-const startCronJobs = require('./cronJobs');
+
 
 const app = express();
 
@@ -142,7 +142,7 @@ const server = http.createServer(app);
 
 socket.init(server);
 
-startCronJobs();
+
 
 const PORT = process.env.PORT || 5000;
 

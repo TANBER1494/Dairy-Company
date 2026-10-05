@@ -20,6 +20,20 @@ router.post(
   dashboardController.runManualArchive
 );
 
+router.post(
+  '/run-notifications',
+  (req, res, next) => {
+    const providedSecret = req.query.secret;
+    const actualSecret = process.env.CRON_SECRET;
+
+    if (!providedSecret || providedSecret !== actualSecret) {
+      return res.status(403).json({ message: 'غير مصرح لك بإجراء هذه العملية.' });
+    }
+    next();
+  },
+  dashboardController.runShiftNotification
+);
+
 router.use(protect);
 
 /**

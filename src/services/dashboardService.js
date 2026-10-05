@@ -5,6 +5,8 @@ const Supplier = require('../models/Supplier');
 const Client = require('../models/Client');
 const Product = require('../models/Product');
 const DailyReport = require('../models/DailyReport');
+const Notification = require('../models/Notification');
+const socket = require('../models/socket');
 
 class DashboardService {
   _getLocalDateString(date) {
@@ -170,6 +172,37 @@ class DashboardService {
     );
 
     return savedReport;
+  }
+
+  async triggerShiftNotification() {
+    const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
+    
+    const isAfternoon = currentHour >= 14 && currentHour <= 17;
+    const endedShift = isAfternoon ? 'الوردية الصباحية' : 'الوردية المسائية';
+    const startedShift = isAfternoon ? 'الوردية المسائية' : 'الوردية الصباحية';
+
+    const title = `تبديل الورديات`;
+    const message = `انتهت ${endedShift} وبدأت الآن ${startedShift}.`;
+    const targetRoles = ['Admin', 'GeneralAccountant', 'InventoryAccountant'];
+    
+    const notificationsToInsert = targetRoles.map(role => ({
+      target_role: role,
+      title,
+      message,
+      type: 'SHIFT_CHANGE',
+      link: '/dashboard' 
+    }));
+
+    const createdNotifications = await Notification.insertMany(notificationsToInsert);
+
+    const io = socket.getIO();
+    if (io) {
+      createdNotifications.forEach(notif => {
+        io.to(notif.target_role).emit('new_notification', notif);
+      });
+    }
+
+    return { endedShift, startedShift };
   }
 }
 
