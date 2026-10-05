@@ -10,7 +10,6 @@ const getDashboardSummary = asyncHandler(async (req, res) => {
   });
 });
 
-// المتحكم الجديد
 const getDailyCollectionReport = asyncHandler(async (req, res) => {
   const report = await dashboardService.getDailyCollectionReport(req.query);
   
@@ -20,7 +19,19 @@ const getDailyCollectionReport = asyncHandler(async (req, res) => {
   });
 });
 
+const runManualArchive = asyncHandler(async (req, res) => {
+  const date = req.body?.date || req.query?.date; 
+  
+  const report = await dashboardService.forceArchive(date);
+  
+  res.status(200).json({
+    message: `تم أرشفة يوم ${report.date_string} وتجميد حالته بنجاح`,
+    data: report
+  });
+});
+
 module.exports = {
   getDashboardSummary,
-  getDailyCollectionReport
+  getDailyCollectionReport,
+  runManualArchive
 };

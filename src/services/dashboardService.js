@@ -151,6 +151,26 @@ class DashboardService {
       return await this.calculateLiveDailyReport(requestDate, query.shift);
     }
   }
+
+  async forceArchive(dateString) {
+    let targetDate;
+    if (dateString) {
+      targetDate = new Date(`${dateString}T12:00:00Z`); 
+    } else {
+      targetDate = new Date();
+      targetDate.setHours(targetDate.getHours() - 4);
+    }
+
+    const reportData = await this.calculateLiveDailyReport(targetDate);
+    
+    const savedReport = await DailyReport.findOneAndUpdate(
+      { date_string: reportData.date_string },
+      reportData,
+      { upsert: true, new: true }
+    );
+
+    return savedReport;
+  }
 }
 
 module.exports = new DashboardService();

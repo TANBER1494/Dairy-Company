@@ -5,6 +5,21 @@ const { protect } = require('../middlewares/authMiddleware');
 const { authorize } = require('../middlewares/roleMiddleware');
 const { cacheMiddleware } = require('../middlewares/cacheMiddleware');
 
+
+router.post(
+  '/run-archive',
+  (req, res, next) => {
+    const providedSecret = req.query.secret;
+    const actualSecret = process.env.CRON_SECRET;
+
+    if (!providedSecret || providedSecret !== actualSecret) {
+      return res.status(403).json({ message: 'غير مصرح لك بإجراء هذه العملية. كلمة السر غير صحيحة.' });
+    }
+    next();
+  },
+  dashboardController.runManualArchive
+);
+
 router.use(protect);
 
 /**
@@ -94,5 +109,8 @@ router.get(
   authorize('Admin', 'InventoryAccountant', 'GeneralAccountant'),
   dashboardController.getDailyCollectionReport
 );
+
+
+
 
 module.exports = router;

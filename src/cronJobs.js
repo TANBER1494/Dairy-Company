@@ -9,7 +9,7 @@ const startCronJobs = () => {
   cron.schedule('59 15 * * *', async () => {
     console.log('[CRON] إرسال إشعار انتهاء الوردية الصباحية...');
     await sendShiftNotification('الوردية الصباحية', 'الوردية المسائية');
-  });
+  }, { timezone: "Africa/Cairo" });
 
   cron.schedule('55 3 * * *', async () => {
     try {
@@ -30,12 +30,12 @@ const startCronJobs = () => {
     } catch (error) {
       console.error('[CRON] خطأ أثناء حفظ أرشيف التوريد اليومي:', error.message);
     }
-  });
+  }, { timezone: "Africa/Cairo" });
 
   cron.schedule('59 3 * * *', async () => {
     console.log('[CRON] إرسال إشعار انتهاء الوردية المسائية...');
     await sendShiftNotification('الوردية المسائية', 'الوردية الصباحية');
-  });
+  }, { timezone: "Africa/Cairo" }); 
 };
 
 async function sendShiftNotification(endedShift, startedShift) {
