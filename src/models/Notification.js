@@ -27,7 +27,8 @@ const notificationSchema = new mongoose.Schema(
         'SUPPLIER_DELIVERY',
         'INVENTORY_ALERT',
         'SYSTEM_UPDATE',
-        'GENERAL_ALERT'
+        'GENERAL_ALERT',
+        'SHIFT_CHANGE'
       ],
       required: true,
     },
