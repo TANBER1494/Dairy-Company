@@ -174,15 +174,24 @@ class DashboardService {
     return savedReport;
   }
 
-  async triggerShiftNotification() {
+async triggerShiftNotification() {
     const currentHour = parseInt(new Date().toLocaleString("en-US", {timeZone: "Africa/Cairo", hour: '2-digit', hour12: false}));
     
     const isAfternoon = currentHour >= 14 && currentHour <= 17;
-    const endedShift = isAfternoon ? 'الوردية الصباحية' : 'الوردية المسائية';
-    const startedShift = isAfternoon ? 'الوردية المسائية' : 'الوردية الصباحية';
+    const endedShiftArabic = isAfternoon ? 'الوردية الصباحية' : 'الوردية المسائية';
+    const startedShiftArabic = isAfternoon ? 'الوردية المسائية' : 'الوردية الصباحية';
+    const shiftCode = isAfternoon ? 'MORNING' : 'EVENING';
 
-    const title = `تبديل الورديات`;
-    const message = `انتهت ${endedShift} وبدأت الآن ${startedShift}.`;
+    const workingDate = new Date();
+    workingDate.setHours(workingDate.getHours() - 4);
+
+    const reportData = await this.calculateLiveDailyReport(workingDate, shiftCode);
+    const suppliedCount = reportData.suppliedCount || 0;
+    const pendingCount = reportData.pendingCount || 0;
+
+    const title = `تقرير توريد ${endedShiftArabic}`;
+    const message = `انتهت ${endedShiftArabic} وبدأت الآن ${startedShiftArabic}. تم التوريد من ${suppliedCount} مورد، ومتبقي ${pendingCount} لم يوردوا.`;
+    
     const targetRoles = ['Admin', 'GeneralAccountant', 'InventoryAccountant'];
     
     const notificationsToInsert = targetRoles.map(role => ({
@@ -202,7 +211,7 @@ class DashboardService {
       });
     }
 
-    return { endedShift, startedShift };
+    return { endedShift: endedShiftArabic, startedShift: startedShiftArabic, suppliedCount, pendingCount };
   }
 }
 
