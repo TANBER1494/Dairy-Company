@@ -18,6 +18,9 @@ const swaggerSpec = require('./config/swagger');
 // Database Connection
 const connectDB = require('./config/db');
 
+
+
+
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -104,6 +107,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: "Dairy Company API Docs"
 }));
 
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'success',
+    message: 'Dairy Company API is running successfully! 🚀' 
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -123,6 +133,8 @@ app.use((req, res, next) => {
   err.statusCode = 404;
   next(err);
 });
+
+
 
 app.use(errorHandler);
 
